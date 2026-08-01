@@ -5,6 +5,8 @@
 /tmp
 /out-tsc
 /bazel-out
+target/
+build/
 
 # Node
 /node_modules
@@ -19,6 +21,17 @@ yarn-error.log
 *.launch
 .settings/
 *.sublime-workspace
+.apt_generated
+.factorypath
+.springBeans
+.sts4-cache
+*.iws
+*.iml
+*.ipr
+/nbproject/private/
+/nbbuild/
+/nbdist/
+/.nb-gradle/
 
 # Visual Studio Code
 .vscode/*
@@ -29,7 +42,7 @@ yarn-error.log
 !.vscode/mcp.json
 .history/*
 
-# Miscellaneous
+# Miscellaneous & Frameworks
 /.angular/cache
 .sass-cache/
 /connect.lock
@@ -37,7 +50,9 @@ yarn-error.log
 /libpeerconnection.log
 testem.log
 /typings
-__screenshots__/
+__screenshots__
+HELP.md
+.mvn/wrapper/maven-wrapper.jar
 
 # System files
 .DS_Store
