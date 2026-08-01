@@ -1,0 +1,176 @@
+﻿.page-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  padding: 30px 20px;
+  box-sizing: border-box;
+}
+
+.registro-card {
+  width: 100%;
+  max-width: 520px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  padding: 36px 32px;
+  box-sizing: border-box;
+
+  .brand-header {
+    text-align: center;
+    margin-bottom: 24px;
+
+    h2 {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      margin-top: 4px;
+      font-size: 0.875rem;
+      color: #64748b;
+    }
+  }
+
+  .alert-danger {
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    input {
+      width: 100%;
+      padding: 11px 13px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 0.925rem;
+      color: #1e293b;
+      box-sizing: border-box;
+      transition: all 0.2s ease-in-out;
+      outline: none;
+
+      &:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+      }
+    }
+
+    .help-text {
+      display: block;
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-top: 5px;
+    }
+  }
+
+  .form-row {
+    display: flex;
+    gap: 14px;
+
+    .form-group {
+      flex: 1;
+    }
+
+    .codigo-area {
+      flex: 0.35;
+    }
+
+    .telefono {
+      flex: 0.65;
+    }
+  }
+
+  .btn {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.925rem;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    border: none;
+
+    &-primary {
+      background-color: #1e293b;
+      color: #ffffff;
+      margin-top: 10px;
+
+      &:hover {
+        background-color: #0f172a;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+      }
+    }
+
+    &-success {
+      background-color: #059669;
+      color: #ffffff;
+      margin-top: 10px;
+
+      &:hover {
+        background-color: #047857;
+        box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
+      }
+    }
+  }
+
+  .divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 20px 0 16px 0;
+
+    &::before, &::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    span {
+      padding: 0 10px;
+      color: #2563eb;
+      font-weight: 600;
+      font-size: 0.8rem;
+    }
+  }
+
+  .footer-actions {
+    text-align: center;
+    margin-top: 22px;
+
+    .back-link {
+      color: #2563eb;
+      font-size: 0.85rem;
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.2s;
+
+      &:hover {
+        color: #1d4ed8;
+        text-decoration: underline;
+      }
+    }
+  }
+}
