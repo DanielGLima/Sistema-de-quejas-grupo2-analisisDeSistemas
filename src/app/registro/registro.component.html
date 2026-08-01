@@ -1,0 +1,78 @@
+﻿<div class="page-wrapper">
+  <div class="registro-card">
+    <div class="brand-header">
+      <h2>Restaurante Las Delicias</h2>
+      <p class="subtitle">Registro de Nuevo Usuario Cliente</p>
+    </div>
+
+    <div *ngIf="mensajeError" class="alert alert-danger">
+      <span>⚠️ {{ mensajeError }}</span>
+    </div>
+
+    <form [formGroup]="registroForm">
+      <div class="form-group">
+        <label for="nombreCompleto">Nombre Completo *</label>
+        <input id="nombreCompleto" type="text" formControlName="nombreCompleto" />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="fechaNacimiento">Fecha Nacimiento *</label>
+          <input id="fechaNacimiento" type="date" formControlName="fechaNacimiento" />
+        </div>
+
+        <div class="form-group">
+          <label for="nacionalidad">Nacionalidad *</label>
+          <input id="nacionalidad" type="text" formControlName="nacionalidad" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="correoElectronico">Correo Electrónico *</label>
+        <input id="correoElectronico" type="email" formControlName="correoElectronico" />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group codigo-area">
+          <label for="codigoArea">Código *</label>
+          <input id="codigoArea" type="text" formControlName="codigoArea" />
+        </div>
+
+        <div class="form-group telefono">
+          <label for="telefono">Teléfono (8 dígitos) *</label>
+          <input id="telefono" type="text" maxlength="8" formControlName="telefono" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="direccion">Dirección Residencial *</label>
+        <input id="direccion" type="text" formControlName="direccion" />
+      </div>
+
+      <button *ngIf="!pasoValidado" type="button" class="btn btn-primary" (click)="validarDatos()">
+        Validar Información
+      </button>
+
+      <div *ngIf="pasoValidado" class="seccion-password">
+        <div class="divider">
+          <span>Creación de Contraseña</span>
+        </div>
+        <div class="form-group">
+          <label for="password">Contraseña *</label>
+          <input id="password" type="password" formControlName="password" />
+          <small class="help-text">Requiere mínimo 6 caracteres, 1 mayúscula, 1 número y 1 carácter especial.</small>
+        </div>
+
+        <button type="button" class="btn btn-success" (click)="registrarUsuario()">
+          Finalizar Registro
+        </button>
+      </div>
+    </form>
+
+    <div class="footer-actions">
+      <a routerLink="/login" class="back-link">
+        ← Volver al Inicio de Sesión
+      </a>
+    </div>
+  </div>
+</div>
