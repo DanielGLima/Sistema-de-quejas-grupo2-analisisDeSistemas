@@ -48,26 +48,37 @@
     text-align: center;
   }
 
+  .alert-info {
+    background-color: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1e40af;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
   .form-group {
     margin-bottom: 16px;
 
     label {
       display: block;
-      font-size: 0.8rem;
+      font-size: 0.825rem;
       font-weight: 600;
       color: #334155;
       margin-bottom: 6px;
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
+      letter-spacing: 0.01em;
     }
 
-    input {
+    input, select {
       width: 100%;
       padding: 11px 13px;
       border: 1px solid #cbd5e1;
       border-radius: 8px;
       font-size: 0.925rem;
       color: #1e293b;
+      background-color: #ffffff;
       box-sizing: border-box;
       transition: all 0.2s ease-in-out;
       outline: none;
@@ -134,6 +145,17 @@
         box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
       }
     }
+
+    &-secondary {
+      background-color: #f8fafc;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+
+      &:hover {
+        background-color: #f1f5f9;
+        border-color: #94a3b8;
+      }
+    }
   }
 
   .divider {
@@ -170,6 +192,50 @@
       &:hover {
         color: #1d4ed8;
         text-decoration: underline;
+      }
+    }
+  }
+}
+
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(15, 23, 42, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+
+  .modal-card {
+    background: #ffffff;
+    padding: 24px 32px;
+    border-radius: 12px;
+    max-width: 380px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+
+    h3 {
+      margin-top: 0;
+      color: #0f172a;
+      font-size: 1.25rem;
+    }
+
+    p {
+      color: #64748b;
+      font-size: 0.95rem;
+      margin-bottom: 24px;
+    }
+
+    .modal-buttons {
+      display: flex;
+      gap: 12px;
+
+      button {
+        flex: 1;
       }
     }
   }
