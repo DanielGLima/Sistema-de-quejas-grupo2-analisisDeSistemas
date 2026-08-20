@@ -1,17 +1,13 @@
 <div class="page-wrapper">
   <div class="consulta-container">
     
+    <!-- Encabezado institucional -->
     <div class="header-section">
-      <div>
-        <h2>Restaurante Las Delicias</h2>
-        <p class="subtitle">Sistema de Quejas - Consultar Estado de Casos</p>
-      </div>
-      <a routerLink="/registrar-caso" class="btn btn-primary btn-nuevo">
-        + Registrar Nuevo Caso
-      </a>
+      <h2>Restaurante Las Delicias</h2>
+      <p class="subtitle">Consultar Estado de Casos</p>
     </div>
 
-    <!-- Panel de filtros de búsqueda (Paso 4) -->
+    <!-- Filtros de búsqueda (Paso 4) -->
     <div class="filters-card">
       <div class="filters-grid">
         <div class="filter-item">
@@ -46,7 +42,7 @@
       </div>
     </div>
 
-    <!-- Tabla de Casos (Paso 5) -->
+    <!-- Listado de Casos (Paso 5) -->
     <div class="table-card">
       <div class="table-responsive" *ngIf="casosFiltrados.length > 0; else sinCasos">
         <table class="casos-table">
@@ -83,16 +79,12 @@
         </table>
       </div>
 
-      <!-- FA01: No existen casos registrados con los filtros aplicados -->
+      <!-- FA01: Sin registros -->
       <ng-template #sinCasos>
         <div class="empty-state">
           <p>No se encontraron casos registrados con los criterios seleccionados.</p>
         </div>
       </ng-template>
-    </div>
-
-    <div class="footer-links">
-      <a routerLink="/login" class="back-link">Cerrar Sesión</a>
     </div>
 
   </div>
@@ -137,7 +129,7 @@
       </div>
 
       <div class="detail-block" *ngIf="casoSeleccionado.respuesta">
-        <strong>respuesta del establecimiento:</strong>
+        <strong>respuesta:</strong>
         <p class="box-text response">{{ casoSeleccionado.respuesta }}</p>
       </div>
     </div>

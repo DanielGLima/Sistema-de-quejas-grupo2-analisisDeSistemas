@@ -1,12 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-registrar-caso',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './registrar-caso.component.html',
   styleUrls: ['./registrar-caso.component.scss']
 })
@@ -15,112 +15,62 @@ export class RegistrarCasoComponent implements OnInit {
   mostrarModalConfirmacion: boolean = false;
   mensajeError: string = '';
   mensajeInfo: string = '';
-
-  // Tipos de caso según CU-05
-  tiposCaso: string[] = ['Queja', 'Reclamo', 'Sugerencia', 'Felicitación'];
-  
-  sucursales: string[] = [
-    'Sede Central - Zona 10',
-    'Sucursal Roosevelt - Zona 11',
-    'Sucursal Carretera a El Salvador',
-    'Sucursal Cayalá - Zona 16'
-  ];
-
-  // Catálogo de motivos clasificados según el tipo de caso
-  motivosPorTipo: { [key: string]: string[] } = {
-    'Queja': [
-      'Mala atención del personal',
-      'Demora excesiva en el servicio',
-      'Higiene o estado de las instalaciones',
-      'Calidad o estado de la comida'
-    ],
-    'Reclamo': [
-      'Cobro indebido o error en factura',
-      'Incumplimiento de promociones',
-      'Plato no corresponde al pedido',
-      'Pedido para llevar incompleto'
-    ],
-    'Sugerencia': [
-      'Nuevas opciones de menú',
-      'Mejora en tiempos de entrega',
-      'Instalaciones y ambiente',
-      'Servicio a domicilio'
-    ],
-    'Felicitación': [
-      'Excelente atención del mesero',
-      'Calidad excepcional de los alimentos',
-      'Ambiente y comodidad',
-      'Rapidez en el servicio'
-    ]
-  };
-
-  listaMotivosDisponibles: string[] = [];
-  archivoAdjunto: File | null = null;
   nombreArchivo: string = '';
+
+  // Listas vacías: se poblarán desde el backend
+  tiposCaso: string[] = [];
+  sucursales: string[] = [];
+  listaMotivosDisponibles: string[] = [];
 
   constructor(private fb: FormBuilder, private router: Router) {}
 
   ngOnInit(): void {
+    this.inicializarFormulario();
+  }
+
+  inicializarFormulario(): void {
     this.casoForm = this.fb.group({
       tipoCaso: ['', Validators.required],
       sucursal: ['', Validators.required],
       motivo: ['', Validators.required],
       fechaIncidente: ['', Validators.required],
       detalle: ['', [Validators.required, Validators.maxLength(1000)]],
-      archivo: [null]
+      evidencia: [null]
     });
   }
 
-  // Se ejecuta al cambiar la selección en 'tipo de caso'
   alCambiarTipoCaso(): void {
-    const tipo = this.casoForm.get('tipoCaso')?.value;
-    if (tipo && this.motivosPorTipo[tipo]) {
-      this.listaMotivosDisponibles = this.motivosPorTipo[tipo];
-    } else {
-      this.listaMotivosDisponibles = [];
-    }
+    // Al seleccionar el tipo de caso se restablece el motivo para esperar los datos
     this.casoForm.get('motivo')?.setValue('');
+    this.listaMotivosDisponibles = [];
   }
 
-  alSeleccionarArchivo(event: any): void {
-    this.limpiarMensajes();
-    const file = event.target.files[0];
+  alSeleccionarArchivo(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      const archivo = input.files[0];
+      
+      // Validación de tamaño máximo (5MB)
+      if (archivo.size > 5 * 1024 * 1024) {
+        this.mensajeError = 'El archivo supera el tamaño máximo permitido de 5MB';
+        input.value = '';
+        this.nombreArchivo = '';
+        return;
+      }
 
-    if (!file) {
-      this.archivoAdjunto = null;
-      this.nombreArchivo = '';
-      return;
+      this.nombreArchivo = archivo.name;
+      this.casoForm.patchValue({ evidencia: archivo });
+      this.mensajeError = '';
     }
-
-    const formatosPermitidos = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
-    const tamanoMaximo = 5 * 1024 * 1024; // 5 MB
-
-    if (!formatosPermitidos.includes(file.type)) {
-      this.mensajeError = 'El archivo adjunto debe ser en formato PDF, JPG o PNG';
-      event.target.value = '';
-      this.archivoAdjunto = null;
-      this.nombreArchivo = '';
-      return;
-    }
-
-    if (file.size > tamanoMaximo) {
-      this.mensajeError = 'El archivo adjunto no debe superar el tamaño máximo de 5MB';
-      event.target.value = '';
-      this.archivoAdjunto = null;
-      this.nombreArchivo = '';
-      return;
-    }
-
-    this.archivoAdjunto = file;
-    this.nombreArchivo = file.name;
   }
 
   solicitarConfirmacion(): void {
-    this.limpiarMensajes();
+    this.mensajeError = '';
+    this.mensajeInfo = '';
 
     if (this.casoForm.invalid) {
       this.casoForm.markAllAsTouched();
-      this.mensajeError = 'Debe ingresar todos los campos obligatorios del caso';
+      this.mensajeError = 'Debe completar todos los campos obligatorios con el formato correcto';
       return;
     }
 
@@ -135,12 +85,7 @@ export class RegistrarCasoComponent implements OnInit {
       return;
     }
 
-    alert('El caso fue registrado exitosamente');
+    // Redirección al panel tras confirmar
     this.router.navigate(['/consultar-casos']);
-  }
-
-  limpiarMensajes(): void {
-    this.mensajeError = '';
-    this.mensajeInfo = '';
   }
 }

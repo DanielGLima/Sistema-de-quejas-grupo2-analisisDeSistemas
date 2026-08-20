@@ -59,7 +59,7 @@
 
       <!-- detalle del caso -->
       <div class="form-group">
-        <label for="detalle">detalle del caso (máx 1000 caracteres)</label>
+        <label for="detalle">detalle del caso</label>
         <textarea 
           id="detalle" 
           rows="4" 
@@ -69,7 +69,7 @@
         </textarea>
       </div>
 
-      <!-- adjuntar archivo -->
+      <!-- adjuntar evidencia -->
       <div class="form-group">
         <label for="archivo">adjuntar evidencia (opcional, PDF/JPG/PNG máx 5MB)</label>
         <input 
@@ -96,12 +96,6 @@
           <button type="button" class="btn btn-secondary" (click)="confirmarRegistro(false)">No</button>
         </div>
       </div>
-    </div>
-
-    <div class="footer-actions">
-      <a routerLink="/consultar-casos" class="back-link">
-        Volver a la consulta de casos
-      </a>
     </div>
   </div>
 </div>

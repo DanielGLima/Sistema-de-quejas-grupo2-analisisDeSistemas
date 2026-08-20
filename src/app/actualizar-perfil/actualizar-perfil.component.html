@@ -1,0 +1,97 @@
+<div class="page-wrapper">
+  <div class="perfil-card">
+    <div class="brand-header">
+      <h2>Restaurante Las Delicias</h2>
+      <p class="subtitle">Sistema de Quejas - Actualizar Perfil de Usuario</p>
+    </div>
+
+    <!-- Mensajes de estado -->
+    <div *ngIf="mensajeError" class="alert alert-danger">
+      <span>⚠️ {{ mensajeError }}</span>
+    </div>
+
+    <div *ngIf="mensajeExito" class="alert alert-success">
+      <span>✅ {{ mensajeExito }}</span>
+    </div>
+
+    <div *ngIf="mensajeInfo" class="alert alert-info">
+      <span>ℹ️ {{ mensajeInfo }}</span>
+    </div>
+
+    <form [formGroup]="perfilForm" (ngSubmit)="solicitarConfirmacion()">
+      <div class="form-row">
+        <!-- nombre -->
+        <div class="form-group">
+          <label for="nombre">nombre</label>
+          <input 
+            id="nombre" 
+            type="text" 
+            formControlName="nombre" 
+            placeholder="Ingrese su nombre"
+          />
+        </div>
+
+        <!-- apellido -->
+        <div class="form-group">
+          <label for="apellido">apellido</label>
+          <input 
+            id="apellido" 
+            type="text" 
+            formControlName="apellido" 
+            placeholder="Ingrese su apellido"
+          />
+        </div>
+      </div>
+
+      <!-- correo electrónico (Solo lectura) -->
+      <div class="form-group">
+        <label for="correoElectronico">correo electrónico</label>
+        <input 
+          id="correoElectronico" 
+          type="email" 
+          formControlName="correoElectronico" 
+        />
+        <small class="help-text">El correo electrónico no puede ser modificado.</small>
+      </div>
+
+      <div class="form-row">
+        <!-- número de teléfono -->
+        <div class="form-group">
+          <label for="telefono">número de teléfono</label>
+          <input 
+            id="telefono" 
+            type="text" 
+            formControlName="telefono" 
+            placeholder="Ej: 55443322"
+          />
+        </div>
+
+        <!-- género -->
+        <div class="form-group">
+          <label for="genero">género</label>
+          <select id="genero" formControlName="genero">
+            <option value="" disabled>Seleccione una opción</option>
+            <option *ngFor="let g of generos" [value]="g">{{ g }}</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Botón de acción principal -->
+      <button type="submit" class="btn btn-primary">
+        Actualizar Datos
+      </button>
+    </form>
+
+    <!-- Modal de confirmación (Paso 5 y 6) -->
+    <div *ngIf="mostrarModalConfirmacion" class="modal-backdrop">
+      <div class="modal-card">
+        <h3>Confirmación</h3>
+        <p>¿Está seguro de que desea guardar los cambios en su perfil?</p>
+        <div class="modal-buttons">
+          <button type="button" class="btn btn-primary" (click)="confirmarActualizacion(true)">Sí</button>
+          <button type="button" class="btn btn-secondary" (click)="confirmarActualizacion(false)">No</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

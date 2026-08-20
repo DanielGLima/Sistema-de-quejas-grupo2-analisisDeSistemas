@@ -1,7 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 
 export interface Caso {
   id: string;
@@ -10,7 +9,7 @@ export interface Caso {
   motivo: string;
   fechaIncidente: string;
   fechaCreacion: string;
-  estado: 'Pendiente' | 'En Proceso' | 'Resuelto' | 'Rechazado';
+  estado: string;
   detalle: string;
   respuesta?: string;
   archivoEvidencia?: string;
@@ -19,23 +18,22 @@ export interface Caso {
 @Component({
   selector: 'app-consultar-casos',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule],
   templateUrl: './consultar-casos.component.html',
   styleUrls: ['./consultar-casos.component.scss']
 })
 export class ConsultarCasosComponent implements OnInit {
-  // Filtros según CU-06
   filtroEstado: string = 'Todos';
+  filtroTipoCaso: string = 'Todos';
   filtroFechaDesde: string = '';
   filtroFechaHasta: string = '';
-  filtroTipoCaso: string = 'Todos';
 
-  estadosDisponibles: string[] = ['Todos', 'Pendiente', 'En Proceso', 'Resuelto', 'Rechazado'];
-  tiposCaso: string[] = ['Todos', 'Queja', 'Reclamo', 'Sugerencia', 'Felicitación'];
-
-  // Arreglo vacío listo para recibir datos reales de la base de datos/API
+  // Arreglos vacíos listos para recibir datos del Backend
+  estadosDisponibles: string[] = ['Todos'];
+  tiposCaso: string[] = ['Todos'];
   casos: Caso[] = [];
   casosFiltrados: Caso[] = [];
+
   casoSeleccionado: Caso | null = null;
   mostrarModalDetalle: boolean = false;
 
@@ -43,15 +41,13 @@ export class ConsultarCasosComponent implements OnInit {
     this.aplicarFiltros();
   }
 
-  // Paso 4 y FA01: Aplicación de filtros de consulta
   aplicarFiltros(): void {
     this.casosFiltrados = this.casos.filter(caso => {
-      const coincideEstado = this.filtroEstado === 'Todos' || caso.estado === this.filtroEstado;
-      const coincideTipo = this.filtroTipoCaso === 'Todos' || caso.tipoCaso === this.filtroTipoCaso;
-      const coincideDesde = !this.filtroFechaDesde || caso.fechaCreacion >= this.filtroFechaDesde;
-      const coincideHasta = !this.filtroFechaHasta || caso.fechaCreacion <= this.filtroFechaHasta;
-
-      return coincideEstado && coincideTipo && coincideDesde && coincideHasta;
+      const cumpleEstado = this.filtroEstado === 'Todos' || caso.estado === this.filtroEstado;
+      const cumpleTipo = this.filtroTipoCaso === 'Todos' || caso.tipoCaso === this.filtroTipoCaso;
+      const cumpleDesde = !this.filtroFechaDesde || caso.fechaCreacion >= this.filtroFechaDesde;
+      const cumpleHasta = !this.filtroFechaHasta || caso.fechaCreacion <= this.filtroFechaHasta;
+      return cumpleEstado && cumpleTipo && cumpleDesde && cumpleHasta;
     });
   }
 
@@ -63,25 +59,23 @@ export class ConsultarCasosComponent implements OnInit {
     this.aplicarFiltros();
   }
 
-  // Paso 6: Ver detalle del caso seleccionado
   verDetalle(caso: Caso): void {
     this.casoSeleccionado = caso;
     this.mostrarModalDetalle = true;
   }
 
   cerrarModal(): void {
-    this.mostrarModalDetalle = false;
     this.casoSeleccionado = null;
+    this.mostrarModalDetalle = false;
   }
 
-  // Clases dinámicas de color para los estados
   obtenerClaseEstado(estado: string): string {
-    switch (estado) {
-      case 'Pendiente': return 'badge-pendiente';
-      case 'En Proceso': return 'badge-proceso';
-      case 'Resuelto': return 'badge-resuelto';
-      case 'Rechazado': return 'badge-rechazado';
-      default: return '';
+    switch (estado?.toLowerCase()) {
+      case 'pendiente': return 'badge-pendiente';
+      case 'en proceso': return 'badge-proceso';
+      case 'resuelto': return 'badge-resuelto';
+      case 'rechazado': return 'badge-rechazado';
+      default: return 'badge-default';
     }
   }
 }
