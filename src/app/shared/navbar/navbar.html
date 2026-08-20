@@ -1,0 +1,34 @@
+<header class="navbar-wrapper">
+  <!-- Brand / Logo -->
+  <div class="brand-badge" routerLink="/consultar-casos">
+    <div class="logo-circle">🍽️</div>
+    <div class="brand-text">
+      <span class="brand-name">Las Delicias</span>
+      <span class="brand-tag">Portal de Quejas</span>
+    </div>
+  </div>
+
+  <!-- Navigation Links / Action Pills -->
+  <nav class="nav-actions">
+    <a routerLink="/registrar-caso" routerLinkActive="active" class="nav-pill">
+      <span class="pill-icon">➕</span>
+      <span class="pill-text">Nuevo Caso</span>
+    </a>
+
+    <a routerLink="/consultar-casos" routerLinkActive="active" class="nav-pill">
+      <span class="pill-icon">📋</span>
+      <span class="pill-text">Mis Casos</span>
+    </a>
+
+    <a routerLink="/actualizar-perfil" routerLinkActive="active" class="nav-pill">
+      <span class="pill-icon">👤</span>
+      <span class="pill-text">Mi Perfil</span>
+    </a>
+
+    <!-- Botón Creativo Cerrar Sesión (CU-04) -->
+    <button type="button" class="btn-logout" (click)="cerrarSesion()">
+      <span class="logout-icon">🚪</span>
+      <span class="logout-text">Cerrar Sesión</span>
+    </button>
+  </nav>
+</header>

@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { NavbarComponent } from '../shared/navbar/navbar';
 
 export interface Caso {
   id: string;
@@ -18,7 +19,7 @@ export interface Caso {
 @Component({
   selector: 'app-consultar-casos',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, NavbarComponent],
   templateUrl: './consultar-casos.component.html',
   styleUrls: ['./consultar-casos.component.scss']
 })

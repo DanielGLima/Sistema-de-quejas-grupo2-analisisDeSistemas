@@ -2,11 +2,11 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-
+import { NavbarComponent } from '../shared/navbar/navbar';
 @Component({
   selector: 'app-registrar-caso',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, NavbarComponent],
   templateUrl: './registrar-caso.component.html',
   styleUrls: ['./registrar-caso.component.scss']
 })

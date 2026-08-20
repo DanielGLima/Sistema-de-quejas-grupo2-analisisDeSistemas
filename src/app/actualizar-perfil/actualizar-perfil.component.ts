@@ -1,11 +1,11 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-
+import { NavbarComponent } from '../shared/navbar/navbar';
 @Component({
   selector: 'app-actualizar-perfil',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, NavbarComponent],
   templateUrl: './actualizar-perfil.component.html',
   styleUrls: ['./actualizar-perfil.component.scss']
 })
