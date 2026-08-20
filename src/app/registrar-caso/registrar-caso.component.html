@@ -1,0 +1,107 @@
+<div class="page-wrapper">
+  <div class="caso-card">
+    <div class="brand-header">
+      <h2>Restaurante Las Delicias</h2>
+      <p class="subtitle">Sistema de Quejas - Registrar Nuevo Caso</p>
+    </div>
+
+    <div *ngIf="mensajeError" class="alert alert-danger">
+      <span>⚠️ {{ mensajeError }}</span>
+    </div>
+
+    <div *ngIf="mensajeInfo" class="alert alert-info">
+      <span>ℹ️ {{ mensajeInfo }}</span>
+    </div>
+
+    <form [formGroup]="casoForm" (ngSubmit)="solicitarConfirmacion()">
+      <!-- tipo de caso -->
+      <div class="form-group">
+        <label for="tipoCaso">tipo de caso</label>
+        <select id="tipoCaso" formControlName="tipoCaso" (change)="alCambiarTipoCaso()">
+          <option value="" disabled selected>Seleccione un tipo de caso</option>
+          <option *ngFor="let tipo of tiposCaso" [value]="tipo">{{ tipo }}</option>
+        </select>
+      </div>
+
+      <!-- sucursal -->
+      <div class="form-group">
+        <label for="sucursal">sucursal</label>
+        <select id="sucursal" formControlName="sucursal">
+          <option value="" disabled selected>Seleccione una sucursal</option>
+          <option *ngFor="let suc of sucursales" [value]="suc">{{ suc }}</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <!-- motivo -->
+        <div class="form-group">
+          <label for="motivo">motivo</label>
+          <select id="motivo" formControlName="motivo">
+            <option value="" disabled selected>
+              {{ listaMotivosDisponibles.length ? 'Seleccione un motivo' : 'Primero elija un tipo de caso' }}
+            </option>
+            <option *ngFor="let mot of listaMotivosDisponibles" [value]="mot">
+              {{ mot }}
+            </option>
+          </select>
+        </div>
+
+        <!-- fecha del incidente -->
+        <div class="form-group">
+          <label for="fechaIncidente">fecha del incidente</label>
+          <input 
+            id="fechaIncidente" 
+            type="date" 
+            formControlName="fechaIncidente" 
+          />
+        </div>
+      </div>
+
+      <!-- detalle del caso -->
+      <div class="form-group">
+        <label for="detalle">detalle del caso (máx 1000 caracteres)</label>
+        <textarea 
+          id="detalle" 
+          rows="4" 
+          maxlength="1000" 
+          placeholder="Describa detalladamente lo sucedido..." 
+          formControlName="detalle">
+        </textarea>
+      </div>
+
+      <!-- adjuntar archivo -->
+      <div class="form-group">
+        <label for="archivo">adjuntar evidencia (opcional, PDF/JPG/PNG máx 5MB)</label>
+        <input 
+          id="archivo" 
+          type="file" 
+          accept=".pdf,.jpg,.jpeg,.png" 
+          (change)="alSeleccionarArchivo($event)" 
+        />
+        <small *ngIf="nombreArchivo" class="file-name">Archivo seleccionado: {{ nombreArchivo }}</small>
+      </div>
+
+      <button type="submit" class="btn btn-primary">
+        Registrar Caso
+      </button>
+    </form>
+
+    <!-- Modal de confirmación -->
+    <div *ngIf="mostrarModalConfirmacion" class="modal-backdrop">
+      <div class="modal-card">
+        <h3>Confirmación</h3>
+        <p>¿Está seguro de proceder con el registro de este caso?</p>
+        <div class="modal-buttons">
+          <button type="button" class="btn btn-primary" (click)="confirmarRegistro(true)">Sí</button>
+          <button type="button" class="btn btn-secondary" (click)="confirmarRegistro(false)">No</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-actions">
+      <a routerLink="/consultar-casos" class="back-link">
+        Volver a la consulta de casos
+      </a>
+    </div>
+  </div>
+</div>
