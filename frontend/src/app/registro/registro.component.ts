@@ -1,7 +1,7 @@
 ﻿import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-registro',
@@ -12,12 +12,18 @@ import { RouterLink } from '@angular/router';
 })
 export class RegistroComponent implements OnInit {
   registroForm!: FormGroup;
-  pasoValidado: boolean = false;
   mensajeError: string = '';
+  mensajeExito: string = '';
+  mensajeInfo: string = '';
 
-  private correosExistentes: string[] = ['admin@delicias.com', 'cliente@delicias.com'];
+  // Arreglos listos para recibir datos del Backend
+  listaNacionalidades: string[] = [];
 
-  constructor(private fb: FormBuilder) {}
+  // Control de flujo en dos pasos (Datos -> Contraseña)
+  pasoPassword: boolean = false;
+  mostrarModalConfirmacion: boolean = false;
+
+  constructor(private fb: FormBuilder, private router: Router) {}
 
   ngOnInit(): void {
     this.inicializarFormulario();
@@ -25,58 +31,80 @@ export class RegistroComponent implements OnInit {
 
   inicializarFormulario(): void {
     this.registroForm = this.fb.group({
-      nombreCompleto: ['', Validators.required],
+      nombreCompleto: ['', [Validators.required, Validators.maxLength(100)]],
       fechaNacimiento: ['', Validators.required],
       nacionalidad: ['', Validators.required],
-      correoElectronico: ['', [Validators.required, Validators.email]],
-      codigoArea: ['', Validators.required],
-      telefono: ['', [Validators.required, Validators.pattern('^[0-9]{8}$')]],
-      direccion: ['', Validators.required],
-      password: ['', [Validators.required, this.validarPasswordFormato]]
+      correoElectronico: ['', [Validators.required, Validators.email, Validators.maxLength(100)]],
+      codigoArea: ['', [Validators.required, Validators.pattern(/^[0-9]{1,4}$/)]],
+      telefono: ['', [Validators.required, Validators.pattern(/^[0-9]{8}$/)]],
+      direccion: ['', [Validators.required, Validators.maxLength(150)]],
+      password: ['', [Validators.required, Validators.minLength(8)]],
+      confirmarPassword: ['', Validators.required]
+    }, { validators: this.validarPasswordsIguales });
+  }
+
+  validarPasswordsIguales(control: AbstractControl): ValidationErrors | null {
+    const pass = control.get('password')?.value;
+    const confirm = control.get('confirmarPassword')?.value;
+    return pass === confirm ? null : { noCoincide: true };
+  }
+
+  habilitarPassword(): void {
+    this.limpiarMensajes();
+
+    // Validar solo los campos de la primera sección
+    const camposPaso1 = ['nombreCompleto', 'fechaNacimiento', 'nacionalidad', 'correoElectronico', 'codigoArea', 'telefono', 'direccion'];
+    let formInvalido = false;
+
+    camposPaso1.forEach(campo => {
+      const control = this.registroForm.get(campo);
+      if (!control || control.invalid) {
+        control?.markAsTouched();
+        formInvalido = true;
+      }
     });
+
+    if (formInvalido) {
+      this.mensajeError = 'Debe completar todos los datos personales obligatorios antes de continuar';
+      return;
+    }
+
+    this.pasoPassword = true;
   }
 
-  validarPasswordFormato(control: AbstractControl): ValidationErrors | null {
-    const value = control.value || '';
-    if (!value) return null;
-    const esValido = /[A-Z]/.test(value) && /[0-9]/.test(value) && /[!@#$%^&*(),.?":{}|<>]/.test(value) && value.length >= 6;
-    return esValido ? null : { passwordInvalida: true };
+  solicitarConfirmacion(): void {
+    this.limpiarMensajes();
+
+    if (this.registroForm.invalid) {
+      this.registroForm.markAllAsTouched();
+      if (this.registroForm.hasError('noCoincide')) {
+        this.mensajeError = 'Las contraseñas no coinciden';
+      } else {
+        this.mensajeError = 'Debe completar todos los campos obligatorios con el formato correcto';
+      }
+      return;
+    }
+
+    this.mostrarModalConfirmacion = true;
   }
 
-  validarDatos(): void {
+  confirmarRegistro(acepta: boolean): void {
+    this.mostrarModalConfirmacion = false;
+
+    if (!acepta) {
+      this.mensajeInfo = 'Se ha cancelado la creación de la cuenta';
+      return;
+    }
+
+    this.mensajeExito = 'Usuario registrado exitosamente. Redirigiendo al inicio de sesión...';
+    setTimeout(() => {
+      this.router.navigate(['/login']);
+    }, 2000);
+  }
+
+  limpiarMensajes(): void {
     this.mensajeError = '';
-    const camposBasicos = ['nombreCompleto', 'fechaNacimiento', 'nacionalidad', 'correoElectronico', 'codigoArea', 'telefono', 'direccion'];
-    const formularioInvalido = camposBasicos.some(campo => this.registroForm.get(campo)?.invalid);
-
-    if (formularioInvalido) {
-      this.mensajeError = 'Debe ingresar los campos obligatorios correctamente.';
-      return;
-    }
-
-    const correoIngresado = this.registroForm.get('correoElectronico')?.value?.toLowerCase();
-    if (this.correosExistentes.includes(correoIngresado)) {
-      this.mensajeError = 'El correo electrónico ya se encuentra registrado.';
-      return;
-    }
-
-    this.pasoValidado = true;
-  }
-
-  registrarUsuario(): void {
-    this.mensajeError = '';
-    const passwordControl = this.registroForm.get('password');
-    if (passwordControl?.invalid) {
-      this.mensajeError = 'El formato de la contraseña debe incluir al menos una letra mayúscula, un carácter especial y un número.';
-      return;
-    }
-
-    if (!window.confirm('¿Desea confirmar el registro de su cuenta?')) {
-      alert('Se ha cancelado el registro satisfactoriamente.');
-      return;
-    }
-
-    alert('¡Usuario registrado exitosamente en el sistema!');
-    this.registroForm.reset();
-    this.pasoValidado = false;
+    this.mensajeExito = '';
+    this.mensajeInfo = '';
   }
 }

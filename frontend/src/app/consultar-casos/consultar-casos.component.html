@@ -1,0 +1,142 @@
+<app-navbar></app-navbar>
+<div class="page-wrapper">
+  <div class="consulta-container">
+    
+    <!-- Encabezado institucional -->
+    <div class="header-section">
+      <h2>Restaurante Las Delicias</h2>
+      <p class="subtitle">Consultar Estado de Casos</p>
+    </div>
+
+    <!-- Filtros de búsqueda (Paso 4) -->
+    <div class="filters-card">
+      <div class="filters-grid">
+        <div class="filter-item">
+          <label for="filtroEstado">estado</label>
+          <select id="filtroEstado" [(ngModel)]="filtroEstado" (change)="aplicarFiltros()">
+            <option *ngFor="let est of estadosDisponibles" [value]="est">{{ est }}</option>
+          </select>
+        </div>
+
+        <div class="filter-item">
+          <label for="filtroTipoCaso">tipo de caso</label>
+          <select id="filtroTipoCaso" [(ngModel)]="filtroTipoCaso" (change)="aplicarFiltros()">
+            <option *ngFor="let tipo of tiposCaso" [value]="tipo">{{ tipo }}</option>
+          </select>
+        </div>
+
+        <div class="filter-item">
+          <label for="filtroDesde">fecha desde</label>
+          <input id="filtroDesde" type="date" [(ngModel)]="filtroFechaDesde" (change)="aplicarFiltros()" />
+        </div>
+
+        <div class="filter-item">
+          <label for="filtroHasta">fecha hasta</label>
+          <input id="filtroHasta" type="date" [(ngModel)]="filtroFechaHasta" (change)="aplicarFiltros()" />
+        </div>
+      </div>
+
+      <div class="filter-actions">
+        <button type="button" class="btn btn-secondary btn-sm" (click)="limpiarFiltros()">
+          Limpiar Filtros
+        </button>
+      </div>
+    </div>
+
+    <!-- Listado de Casos (Paso 5) -->
+    <div class="table-card">
+      <div class="table-responsive" *ngIf="casosFiltrados.length > 0; else sinCasos">
+        <table class="casos-table">
+          <thead>
+            <tr>
+              <th>No. Caso</th>
+              <th>tipo de caso</th>
+              <th>sucursal</th>
+              <th>motivo</th>
+              <th>fecha de registro</th>
+              <th>estado</th>
+              <th>acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let caso of casosFiltrados">
+              <td class="code-col">{{ caso.id }}</td>
+              <td>{{ caso.tipoCaso }}</td>
+              <td>{{ caso.sucursal }}</td>
+              <td>{{ caso.motivo }}</td>
+              <td>{{ caso.fechaCreacion }}</td>
+              <td>
+                <span class="badge" [ngClass]="obtenerClaseEstado(caso.estado)">
+                  {{ caso.estado }}
+                </span>
+              </td>
+              <td>
+                <button type="button" class="btn-action" (click)="verDetalle(caso)">
+                  Ver Detalle
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- FA01: Sin registros -->
+      <ng-template #sinCasos>
+        <div class="empty-state">
+          <p>No se encontraron casos registrados con los criterios seleccionados.</p>
+        </div>
+      </ng-template>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal Detalle del Caso (Paso 6 y 7) -->
+<div *ngIf="mostrarModalDetalle && casoSeleccionado" class="modal-backdrop">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Detalle del Caso: {{ casoSeleccionado.id }}</h3>
+      <button class="btn-close" (click)="cerrarModal()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="detail-row">
+        <strong>tipo de caso:</strong> <span>{{ casoSeleccionado.tipoCaso }}</span>
+      </div>
+      <div class="detail-row">
+        <strong>sucursal:</strong> <span>{{ casoSeleccionado.sucursal }}</span>
+      </div>
+      <div class="detail-row">
+        <strong>motivo:</strong> <span>{{ casoSeleccionado.motivo }}</span>
+      </div>
+      <div class="detail-row">
+        <strong>fecha del incidente:</strong> <span>{{ casoSeleccionado.fechaIncidente }}</span>
+      </div>
+      <div class="detail-row">
+        <strong>estado:</strong> 
+        <span class="badge" [ngClass]="obtenerClaseEstado(casoSeleccionado.estado)">
+          {{ casoSeleccionado.estado }}
+        </span>
+      </div>
+      
+      <div class="detail-block">
+        <strong>detalle del caso:</strong>
+        <p class="box-text">{{ casoSeleccionado.detalle }}</p>
+      </div>
+
+      <div class="detail-block" *ngIf="casoSeleccionado.archivoEvidencia">
+        <strong>evidencia adjunta:</strong>
+        <span class="file-tag">📎 {{ casoSeleccionado.archivoEvidencia }}</span>
+      </div>
+
+      <div class="detail-block" *ngIf="casoSeleccionado.respuesta">
+        <strong>respuesta:</strong>
+        <p class="box-text response">{{ casoSeleccionado.respuesta }}</p>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" (click)="cerrarModal()">Cerrar</button>
+    </div>
+  </div>
+</div>

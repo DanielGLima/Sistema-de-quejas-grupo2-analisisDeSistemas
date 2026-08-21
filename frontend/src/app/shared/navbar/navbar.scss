@@ -1,0 +1,147 @@
+.navbar-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 32px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+
+  // Brand Badge
+  .brand-badge {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.2s ease;
+
+    &:hover {
+      transform: scale(1.02);
+    }
+
+    .logo-circle {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+
+      .brand-name {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: #ffffff;
+        letter-spacing: 0.5px;
+      }
+
+      .brand-tag {
+        font-size: 0.72rem;
+        color: #94a3b8;
+        font-weight: 500;
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+      }
+    }
+  }
+
+  // Navigation Links
+  .nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .nav-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 10px;
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+      .pill-icon {
+        font-size: 0.95rem;
+        transition: transform 0.2s ease;
+      }
+
+      &:hover {
+        color: #f8fafc;
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(255, 255, 255, 0.15);
+        transform: translateY(-1px);
+
+        .pill-icon {
+          transform: scale(1.15);
+        }
+      }
+
+      &.active {
+        color: #38bdf8;
+        background: rgba(56, 189, 248, 0.12);
+        border-color: rgba(56, 189, 248, 0.4);
+        box-shadow: 0 0 16px rgba(56, 189, 248, 0.2);
+
+        .pill-icon {
+          filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.6));
+        }
+      }
+    }
+
+    // Botón Cerrar Sesión
+    .btn-logout {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: 8px;
+      padding: 8px 18px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+      color: #ffffff;
+      border: none;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+      transition: all 0.25s ease;
+
+      .logout-icon {
+        font-size: 0.95rem;
+        transition: transform 0.2s ease;
+      }
+
+      &:hover {
+        background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+        box-shadow: 0 6px 18px rgba(220, 38, 38, 0.45);
+        transform: translateY(-1px);
+
+        .logout-icon {
+          transform: translateX(2px);
+        }
+      }
+
+      &:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+      }
+    }
+  }
+}
