@@ -19,61 +19,109 @@
       <span>ℹ️ {{ mensajeInfo }}</span>
     </div>
 
-    <form [formGroup]="perfilForm" (ngSubmit)="solicitarConfirmacion()">
+    <form *ngIf="!cargando" [formGroup]="perfilForm" (ngSubmit)="solicitarConfirmacion()">
+      <!-- nombre completo -->
+      <div class="form-group">
+        <label for="nombreCompleto">nombre completo</label>
+        <input
+          id="nombreCompleto"
+          type="text"
+          maxlength="100"
+          formControlName="nombreCompleto"
+        />
+      </div>
+
       <div class="form-row">
-        <!-- nombre -->
+        <!-- fecha de nacimiento -->
         <div class="form-group">
-          <label for="nombre">nombre</label>
-          <input 
-            id="nombre" 
-            type="text" 
-            formControlName="nombre" 
-            placeholder="Ingrese su nombre"
+          <label for="fechaNacimiento">fecha de nacimiento</label>
+          <input
+            id="fechaNacimiento"
+            type="date"
+            formControlName="fechaNacimiento"
           />
         </div>
 
-        <!-- apellido -->
+        <!-- nacionalidad -->
         <div class="form-group">
-          <label for="apellido">apellido</label>
-          <input 
-            id="apellido" 
-            type="text" 
-            formControlName="apellido" 
-            placeholder="Ingrese su apellido"
+          <label for="nacionalidad">nacionalidad</label>
+          <input
+            id="nacionalidad"
+            type="text"
+            formControlName="nacionalidad"
           />
         </div>
       </div>
 
-      <!-- correo electrónico (Solo lectura) -->
+      <!-- correo electrónico -->
       <div class="form-group">
         <label for="correoElectronico">correo electrónico</label>
-        <input 
-          id="correoElectronico" 
-          type="email" 
-          formControlName="correoElectronico" 
+        <input
+          id="correoElectronico"
+          type="email"
+          maxlength="100"
+          formControlName="correoElectronico"
         />
-        <small class="help-text">El correo electrónico no puede ser modificado.</small>
       </div>
 
       <div class="form-row">
-        <!-- número de teléfono -->
+        <!-- código de área -->
         <div class="form-group">
-          <label for="telefono">número de teléfono</label>
-          <input 
-            id="telefono" 
-            type="text" 
-            formControlName="telefono" 
-            placeholder="Ej: 55443322"
+          <label for="codigoArea">código de área</label>
+          <input
+            id="codigoArea"
+            type="text"
+            maxlength="4"
+            formControlName="codigoArea"
           />
         </div>
 
-        <!-- género -->
+        <!-- teléfono -->
         <div class="form-group">
-          <label for="genero">género</label>
-          <select id="genero" formControlName="genero">
-            <option value="" disabled>Seleccione una opción</option>
-            <option *ngFor="let g of generos" [value]="g">{{ g }}</option>
-          </select>
+          <label for="telefono">teléfono</label>
+          <input
+            id="telefono"
+            type="text"
+            maxlength="8"
+            placeholder="Ej: 55443322"
+            formControlName="telefono"
+          />
+        </div>
+      </div>
+
+      <!-- dirección -->
+      <div class="form-group">
+        <label for="direccion">dirección</label>
+        <input
+          id="direccion"
+          type="text"
+          maxlength="150"
+          formControlName="direccion"
+        />
+      </div>
+
+      <!-- FA01: cambio de contraseña, opcional -->
+      <div class="form-row">
+        <div class="form-group">
+          <label for="passwordActual">contraseña actual</label>
+          <input
+            id="passwordActual"
+            type="password"
+            maxlength="20"
+            placeholder="Solo si va a cambiar su contraseña"
+            formControlName="passwordActual"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="passwordNueva">contraseña nueva</label>
+          <input
+            id="passwordNueva"
+            type="password"
+            maxlength="20"
+            placeholder="Dejar vacío para no cambiarla"
+            formControlName="passwordNueva"
+          />
         </div>
       </div>
 

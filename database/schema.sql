@@ -33,7 +33,9 @@ INSERT INTO rol (nombre, descripcion) VALUES
     ('Operador', 'Atiende y responde casos asignados')
 ON CONFLICT (nombre) DO NOTHING;
 
--- catalogo_sucursal (CU-05, CU-06, CU-12, CU-13) - catalogo dinamico
+-- catalogo_sucursal (CU-05, CU-06, CU-12, CU-13) - catalogo dinamico,
+-- administrado normalmente desde CU-13. Se siembran unas iniciales para
+-- poder probar el registro de casos mientras no exista esa pantalla.
 CREATE TABLE IF NOT EXISTS sucursal (
     id_sucursal  SERIAL PRIMARY KEY,
     nombre       VARCHAR(50) NOT NULL,
@@ -41,6 +43,12 @@ CREATE TABLE IF NOT EXISTS sucursal (
     telefono     VARCHAR(20),
     activo       BOOLEAN NOT NULL DEFAULT TRUE
 );
+
+INSERT INTO sucursal (nombre, direccion, telefono) VALUES
+    ('Sucursal Centro', 'Av. Principal 123, Zona 1', '22334455'),
+    ('Sucursal Zona 10', '6a Avenida 10-50, Zona 10', '22445566'),
+    ('Sucursal Norte', 'Calzada Norte 45-20', '22556677')
+ON CONFLICT DO NOTHING;
 
 -- catalogo_tipo_caso (CU-05, CU-12): Queja/Reclamo/Denuncia/Sugerencia
 CREATE TABLE IF NOT EXISTS tipo_caso (

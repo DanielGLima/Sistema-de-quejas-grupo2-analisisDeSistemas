@@ -2,6 +2,7 @@
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-registro',
@@ -16,14 +17,18 @@ export class RegistroComponent implements OnInit {
   mensajeExito: string = '';
   mensajeInfo: string = '';
 
-  // Arreglos listos para recibir datos del Backend
-  listaNacionalidades: string[] = [];
+  // CU-01: catalogo de nacionalidad (el documento de casos de uso no definio
+  // valores concretos, asi que se deja como lista fija en el frontend).
+  listaNacionalidades: string[] = [
+    'Guatemalteca', 'Mexicana', 'Salvadoreña', 'Hondureña', 'Nicaragüense',
+    'Costarricense', 'Panameña', 'Colombiana', 'Estadounidense', 'Otra'
+  ];
 
   // Control de flujo en dos pasos (Datos -> Contraseña)
   pasoPassword: boolean = false;
   mostrarModalConfirmacion: boolean = false;
 
-  constructor(private fb: FormBuilder, private router: Router) {}
+  constructor(private fb: FormBuilder, private router: Router, private authService: AuthService) {}
 
   ngOnInit(): void {
     this.inicializarFormulario();
@@ -92,14 +97,27 @@ export class RegistroComponent implements OnInit {
     this.mostrarModalConfirmacion = false;
 
     if (!acepta) {
-      this.mensajeInfo = 'Se ha cancelado la creación de la cuenta';
+      this.mensajeInfo = 'Se ha cancelado el registro satisfactoriamente';
       return;
     }
 
-    this.mensajeExito = 'Usuario registrado exitosamente. Redirigiendo al inicio de sesión...';
-    setTimeout(() => {
-      this.router.navigate(['/login']);
-    }, 2000);
+    const { nombreCompleto, fechaNacimiento, nacionalidad, correoElectronico, codigoArea, telefono, direccion, password } = this.registroForm.value;
+
+    this.authService.registrar({
+      nombreCompleto, fechaNacimiento, nacionalidad,
+      correo: correoElectronico, codigoArea, telefono, direccion, password
+    }).subscribe({
+      next: () => {
+        this.mensajeExito = 'Usuario registrado exitosamente. Redirigiendo al inicio de sesión...';
+        setTimeout(() => {
+          this.router.navigate(['/login']);
+        }, 2000);
+      },
+      error: (err) => {
+        // FA01.1 - Correo ya registrado
+        this.mensajeError = err.error?.message ?? 'No se pudo completar el registro';
+      }
+    });
   }
 
   limpiarMensajes(): void {

@@ -2,7 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NavbarComponent } from '../shared/navbar/navbar';
+import { CasoService } from '../services/caso.service';
 
+// Forma "aplanada" que usa esta pantalla, distinta del modelo que devuelve la API
+// (que trae objetos anidados para tipoCaso/sucursal/estadoCaso).
 export interface Caso {
   id: string;
   tipoCaso: string;
@@ -38,8 +41,30 @@ export class ConsultarCasosComponent implements OnInit {
   casoSeleccionado: Caso | null = null;
   mostrarModalDetalle: boolean = false;
 
+  constructor(private casoService: CasoService) {}
+
   ngOnInit(): void {
-    this.aplicarFiltros();
+    this.cargarCasos();
+  }
+
+  // CU-06
+  cargarCasos(): void {
+    this.casoService.misCasos().subscribe(casosApi => {
+      this.casos = casosApi.map(c => ({
+        id: c.identificadorVisible,
+        tipoCaso: c.tipoCaso.nombre,
+        sucursal: c.sucursal.nombre,
+        motivo: c.categoriaCaso?.nombre ?? 'No aplica',
+        fechaIncidente: c.fechaCreacion,
+        fechaCreacion: c.fechaCreacion,
+        estado: c.estadoCaso.nombre,
+        detalle: c.descripcion
+      }));
+
+      this.estadosDisponibles = ['Todos', ...new Set(this.casos.map(c => c.estado))];
+      this.tiposCaso = ['Todos', ...new Set(this.casos.map(c => c.tipoCaso))];
+      this.aplicarFiltros();
+    });
   }
 
   aplicarFiltros(): void {
