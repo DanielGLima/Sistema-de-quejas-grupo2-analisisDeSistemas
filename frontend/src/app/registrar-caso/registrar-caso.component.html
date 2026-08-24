@@ -17,69 +17,88 @@
     <form [formGroup]="casoForm" (ngSubmit)="solicitarConfirmacion()">
       <!-- tipo de caso -->
       <div class="form-group">
-        <label for="tipoCaso">tipo de caso</label>
-        <select id="tipoCaso" formControlName="tipoCaso" (change)="alCambiarTipoCaso()">
+        <label for="idTipoCaso">tipo de caso</label>
+        <select id="idTipoCaso" formControlName="idTipoCaso">
           <option value="" disabled selected>Seleccione un tipo de caso</option>
-          <option *ngFor="let tipo of tiposCaso" [value]="tipo">{{ tipo }}</option>
+          <option *ngFor="let tipo of tiposCaso" [value]="tipo.idTipoCaso">{{ tipo.nombre }}</option>
         </select>
       </div>
 
       <!-- sucursal -->
       <div class="form-group">
-        <label for="sucursal">sucursal</label>
-        <select id="sucursal" formControlName="sucursal">
+        <label for="idSucursal">sucursal</label>
+        <select id="idSucursal" formControlName="idSucursal">
           <option value="" disabled selected>Seleccione una sucursal</option>
-          <option *ngFor="let suc of sucursales" [value]="suc">{{ suc }}</option>
+          <option *ngFor="let suc of sucursales" [value]="suc.idSucursal">{{ suc.nombreSucursal }}</option>
+        </select>
+      </div>
+
+      <!-- categoría (aplica principalmente a Quejas y Reclamos) -->
+      <div class="form-group">
+        <label for="idCategoria">categoría (opcional)</label>
+        <select id="idCategoria" formControlName="idCategoria">
+          <option value="">No aplica</option>
+          <option *ngFor="let cat of categorias" [value]="cat.idCategoria">{{ cat.nombre }}</option>
         </select>
       </div>
 
       <div class="form-row">
-        <!-- motivo -->
+        <!-- número de factura -->
         <div class="form-group">
-          <label for="motivo">motivo</label>
-          <select id="motivo" formControlName="motivo">
-            <option value="" disabled selected>
-              {{ listaMotivosDisponibles.length ? 'Seleccione un motivo' : 'Primero elija un tipo de caso' }}
-            </option>
-            <option *ngFor="let mot of listaMotivosDisponibles" [value]="mot">
-              {{ mot }}
-            </option>
-          </select>
+          <label for="numeroFactura">número de factura (opcional)</label>
+          <input
+            id="numeroFactura"
+            type="text"
+            maxlength="20"
+            formControlName="numeroFactura"
+          />
         </div>
 
-        <!-- fecha del incidente -->
+        <!-- empleado involucrado -->
         <div class="form-group">
-          <label for="fechaIncidente">fecha del incidente</label>
-          <input 
-            id="fechaIncidente" 
-            type="date" 
-            formControlName="fechaIncidente" 
+          <label for="nombreEmpleadoInvolucrado">nombre del empleado involucrado (opcional)</label>
+          <input
+            id="nombreEmpleadoInvolucrado"
+            type="text"
+            maxlength="100"
+            formControlName="nombreEmpleadoInvolucrado"
           />
         </div>
       </div>
 
-      <!-- detalle del caso -->
+      <!-- descripción del caso -->
       <div class="form-group">
-        <label for="detalle">detalle del caso</label>
-        <textarea 
-          id="detalle" 
-          rows="4" 
-          maxlength="1000" 
-          placeholder="Describa detalladamente lo sucedido..." 
-          formControlName="detalle">
+        <label for="descripcion">descripción del caso</label>
+        <textarea
+          id="descripcion"
+          rows="4"
+          maxlength="1000"
+          placeholder="Describa detalladamente lo sucedido (mínimo 10 caracteres)..."
+          formControlName="descripcion">
         </textarea>
       </div>
 
-      <!-- adjuntar evidencia -->
+      <!-- denuncia anónima -->
+      <div class="form-group form-check">
+        <label>
+          <input type="checkbox" formControlName="esAnonimo" />
+          Registrar como anónimo (aplica principalmente a Denuncias)
+        </label>
+      </div>
+
+      <!-- adjuntar evidencias -->
       <div class="form-group">
-        <label for="archivo">adjuntar evidencia (opcional, PDF/JPG/PNG máx 5MB)</label>
-        <input 
-          id="archivo" 
-          type="file" 
-          accept=".pdf,.jpg,.jpeg,.png" 
-          (change)="alSeleccionarArchivo($event)" 
+        <label for="archivos">adjuntar evidencias (opcional, PDF/JPG/PNG máx 2MB por archivo)</label>
+        <input
+          id="archivos"
+          type="file"
+          multiple
+          accept=".pdf,.jpg,.jpeg,.png"
+          (change)="alSeleccionarArchivos($event)"
         />
-        <small *ngIf="nombreArchivo" class="file-name">Archivo seleccionado: {{ nombreArchivo }}</small>
+        <small *ngIf="archivosSeleccionados.length" class="file-name">
+          {{ archivosSeleccionados.length }} archivo(s) seleccionado(s): {{ archivosSeleccionados.map(a => a.name).join(', ') }}
+        </small>
       </div>
 
       <button type="submit" class="btn btn-primary">

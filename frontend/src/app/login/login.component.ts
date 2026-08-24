@@ -2,6 +2,7 @@
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -14,7 +15,7 @@ export class LoginComponent implements OnInit {
   loginForm!: FormGroup;
   mensajeError: string = '';
 
-  constructor(private fb: FormBuilder, private router: Router) {}
+  constructor(private fb: FormBuilder, private router: Router, private authService: AuthService) {}
 
   ngOnInit(): void {
     this.loginForm = this.fb.group({
@@ -35,11 +36,15 @@ export class LoginComponent implements OnInit {
 
     const { correoElectronico, password } = this.loginForm.value;
 
-    // Simulación de autenticación (cuando integres el backend, esto irá en un servicio HTTP)
-    // Ejemplo de FA05 - Credenciales incorrectas:
-    // this.mensajeError = 'Correo electrónico o contraseña incorrectos';
-    
-    // Paso 5: Inicio exitoso y redirección según rol
-    console.log('Inicio de sesión válido:', { correoElectronico, password });
+    this.authService.login(correoElectronico, password).subscribe({
+      next: () => {
+        // Paso 5: Inicio exitoso y redirección según rol
+        this.router.navigate(['/consultar-casos']);
+      },
+      error: (err) => {
+        // FA05 - Credenciales incorrectas
+        this.mensajeError = err.error?.message ?? 'Correo electrónico o contraseña incorrectos';
+      }
+    });
   }
 }

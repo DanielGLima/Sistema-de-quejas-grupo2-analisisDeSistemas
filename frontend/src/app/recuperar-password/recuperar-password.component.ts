@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-recuperar-password',
@@ -17,11 +18,12 @@ export class RecuperarPasswordComponent implements OnInit {
 
   // Control de fases: Paso 3 (solicitar correo) -> Paso 6 y 7 (código y nueva contraseña)
   faseCodigoEnviado: boolean = false;
+  correoIngresado: string = '';
 
   mensajeError: string = '';
   mensajeExito: string = '';
 
-  constructor(private fb: FormBuilder, private router: Router) {}
+  constructor(private fb: FormBuilder, private router: Router, private authService: AuthService) {}
 
   ngOnInit(): void {
     // Paso 3: correo electrónico (alfanumérico / formato email, 100 caracteres)
@@ -61,9 +63,20 @@ export class RecuperarPasswordComponent implements OnInit {
       return;
     }
 
-    // Paso 5 & FA01 (Mensaje de seguridad neutro genérico sin revelar existencia de cuenta)
-    this.mensajeExito = 'Se enviarán instrucciones de recuperación si el correo es válido';
-    this.faseCodigoEnviado = true;
+    this.correoIngresado = this.correoForm.value.correoElectronico;
+
+    this.authService.recuperarSolicitar(this.correoIngresado).subscribe({
+      next: (respuesta) => {
+        // Paso 5 & FA01 (Mensaje de seguridad neutro genérico sin revelar existencia de cuenta)
+        this.mensajeExito = respuesta.codigo
+          ? `${respuesta.mensaje} (código de prueba, sin envío de correo real todavía: ${respuesta.codigo})`
+          : respuesta.mensaje;
+        this.faseCodigoEnviado = true;
+      },
+      error: (err) => {
+        this.mensajeError = err.error?.message ?? 'No se pudo procesar la solicitud';
+      }
+    });
   }
 
   // Paso 8: Botón "Validar"
@@ -90,11 +103,20 @@ export class RecuperarPasswordComponent implements OnInit {
       return;
     }
 
-    // Paso 9 & 10: Mensaje de éxito
-    alert('Contraseña restablecida exitosamente');
+    const { codigoRecuperacion, nuevaPassword } = this.validacionForm.value;
 
-    // Paso 11: Redirige a CU-00 (Inicio de sesión)
-    this.router.navigate(['/login']);
+    this.authService.recuperarConfirmar(this.correoIngresado, codigoRecuperacion, nuevaPassword).subscribe({
+      next: () => {
+        // Paso 9 & 10: Mensaje de éxito
+        alert('Contraseña restablecida exitosamente');
+        // Paso 11: Redirige a CU-00 (Inicio de sesión)
+        this.router.navigate(['/login']);
+      },
+      error: (err) => {
+        // FA02: código o enlace expirado
+        this.mensajeError = err.error?.message ?? 'El código o enlace ha expirado';
+      }
+    });
   }
 
   private limpiarMensajes(): void {

@@ -3,6 +3,13 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { NavbarComponent } from '../shared/navbar/navbar';
+import { CasoService } from '../services/caso.service';
+import { CatalogoService } from '../services/catalogo.service';
+import { TipoCaso, CategoriaCaso, Sucursal } from '../core/models/catalogos';
+
+const TAMANO_MAXIMO_BYTES = 2 * 1024 * 1024;
+const TIPOS_PERMITIDOS = ['image/jpeg', 'image/png', 'application/pdf'];
+
 @Component({
   selector: 'app-registrar-caso',
   standalone: true,
@@ -15,53 +22,62 @@ export class RegistrarCasoComponent implements OnInit {
   mostrarModalConfirmacion: boolean = false;
   mensajeError: string = '';
   mensajeInfo: string = '';
-  nombreArchivo: string = '';
 
-  // Listas vacías: se poblarán desde el backend
-  tiposCaso: string[] = [];
-  sucursales: string[] = [];
-  listaMotivosDisponibles: string[] = [];
+  archivosSeleccionados: File[] = [];
 
-  constructor(private fb: FormBuilder, private router: Router) {}
+  tiposCaso: TipoCaso[] = [];
+  categorias: CategoriaCaso[] = [];
+  sucursales: Sucursal[] = [];
+
+  constructor(
+    private fb: FormBuilder,
+    private router: Router,
+    private casoService: CasoService,
+    private catalogoService: CatalogoService
+  ) {}
 
   ngOnInit(): void {
     this.inicializarFormulario();
+    this.cargarCatalogos();
   }
 
   inicializarFormulario(): void {
     this.casoForm = this.fb.group({
-      tipoCaso: ['', Validators.required],
-      sucursal: ['', Validators.required],
-      motivo: ['', Validators.required],
-      fechaIncidente: ['', Validators.required],
-      detalle: ['', [Validators.required, Validators.maxLength(1000)]],
-      evidencia: [null]
+      idTipoCaso: ['', Validators.required],
+      idSucursal: ['', Validators.required],
+      idCategoria: [''],
+      descripcion: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(1000)]],
+      numeroFactura: ['', Validators.maxLength(20)],
+      nombreEmpleadoInvolucrado: ['', Validators.maxLength(100)],
+      esAnonimo: [false]
     });
   }
 
-  alCambiarTipoCaso(): void {
-    // Al seleccionar el tipo de caso se restablece el motivo para esperar los datos
-    this.casoForm.get('motivo')?.setValue('');
-    this.listaMotivosDisponibles = [];
+  cargarCatalogos(): void {
+    this.catalogoService.tiposCaso().subscribe(tipos => this.tiposCaso = tipos);
+    this.catalogoService.categoriasCaso().subscribe(categorias => this.categorias = categorias);
+    this.catalogoService.sucursales().subscribe(sucursales => this.sucursales = sucursales);
   }
 
-  alSeleccionarArchivo(event: Event): void {
+  // CU-05, FA03: máximo 2MB por archivo, solo PDF/JPG/PNG
+  alSeleccionarArchivos(event: Event): void {
     const input = event.target as HTMLInputElement;
-    if (input.files && input.files.length > 0) {
-      const archivo = input.files[0];
-      
-      // Validación de tamaño máximo (5MB)
-      if (archivo.size > 5 * 1024 * 1024) {
-        this.mensajeError = 'El archivo supera el tamaño máximo permitido de 5MB';
-        input.value = '';
-        this.nombreArchivo = '';
-        return;
-      }
-
-      this.nombreArchivo = archivo.name;
-      this.casoForm.patchValue({ evidencia: archivo });
-      this.mensajeError = '';
+    if (!input.files) {
+      return;
     }
+
+    this.mensajeError = '';
+    const archivosValidos: File[] = [];
+
+    for (const archivo of Array.from(input.files)) {
+      if (archivo.size > TAMANO_MAXIMO_BYTES || !TIPOS_PERMITIDOS.includes(archivo.type)) {
+        this.mensajeError = 'El archivo adjunto supera los 2 MB o no corresponde a un formato permitido (PDF/Imagen)';
+        continue;
+      }
+      archivosValidos.push(archivo);
+    }
+
+    this.archivosSeleccionados = archivosValidos;
   }
 
   solicitarConfirmacion(): void {
@@ -70,7 +86,7 @@ export class RegistrarCasoComponent implements OnInit {
 
     if (this.casoForm.invalid) {
       this.casoForm.markAllAsTouched();
-      this.mensajeError = 'Debe completar todos los campos obligatorios con el formato correcto';
+      this.mensajeError = 'Debe ingresar los campos obligatorios';
       return;
     }
 
@@ -85,7 +101,24 @@ export class RegistrarCasoComponent implements OnInit {
       return;
     }
 
-    // Redirección al panel tras confirmar
-    this.router.navigate(['/consultar-casos']);
+    const { idTipoCaso, idSucursal, idCategoria, descripcion, numeroFactura, nombreEmpleadoInvolucrado, esAnonimo } = this.casoForm.value;
+
+    this.casoService.crear({
+      idTipoCaso, idSucursal,
+      idCategoria: idCategoria || undefined,
+      descripcion,
+      numeroFactura: numeroFactura || undefined,
+      nombreEmpleadoInvolucrado: nombreEmpleadoInvolucrado || undefined,
+      esAnonimo,
+      archivos: this.archivosSeleccionados
+    }).subscribe({
+      next: () => {
+        // Redirección al panel tras confirmar
+        this.router.navigate(['/consultar-casos']);
+      },
+      error: (err) => {
+        this.mensajeError = err.error?.message ?? 'No se pudo registrar el caso';
+      }
+    });
   }
 }
