@@ -16,6 +16,9 @@ export class RegistroComponent implements OnInit {
   mensajeExito: string = '';
   mensajeInfo: string = '';
 
+  // Bloqueo de fechas futuras en el calendario
+  fechaMaximaHoy: string = this.obtenerFechaHoyISO();
+
   // Arreglos listos para recibir datos del Backend
   listaNacionalidades: string[] = [];
 
@@ -27,6 +30,14 @@ export class RegistroComponent implements OnInit {
 
   ngOnInit(): void {
     this.inicializarFormulario();
+  }
+
+  private obtenerFechaHoyISO(): string {
+    const hoy = new Date();
+    const anio = hoy.getFullYear();
+    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+    const dia = String(hoy.getDate()).padStart(2, '0');
+    return `${anio}-${mes}-${dia}`;
   }
 
   inicializarFormulario(): void {

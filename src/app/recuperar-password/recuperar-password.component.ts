@@ -11,58 +11,54 @@ import { Router, RouterLink } from '@angular/router';
   styleUrls: ['./recuperar-password.component.scss']
 })
 export class RecuperarPasswordComponent implements OnInit {
-  // Formularios para cada fase del caso de uso
   correoForm!: FormGroup;
   validacionForm!: FormGroup;
 
-  // Control de fases: Paso 3 (solicitar correo) -> Paso 6 y 7 (código y nueva contraseña)
   faseCodigoEnviado: boolean = false;
 
   mensajeError: string = '';
   mensajeExito: string = '';
 
+  // Expresión para formato: al menos una mayúscula, un número y un carácter especial
+  private passwordPattern = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>_\-])/;
+
   constructor(private fb: FormBuilder, private router: Router) {}
 
   ngOnInit(): void {
-    // Paso 3: correo electrónico (alfanumérico / formato email, 100 caracteres)
+    // Paso 3: correo electrónico (alfanumérico / formato email, hasta 100 caracteres)
     this.correoForm = this.fb.group({
       correoElectronico: ['', [Validators.required, Validators.email, Validators.maxLength(100)]]
     });
 
     // Pasos 6 y 7: código de recuperación (6 caracteres), nueva contraseña y confirmación
     this.validacionForm = this.fb.group({
-      codigoRecuperacion: ['', [Validators.required, Validators.minLength(6), Validators.maxLength(6)]],
-      nuevaPassword: ['', [Validators.required, Validators.maxLength(20), this.validarPasswordFormato]],
+      codigoRecuperacion: ['', [Validators.required, Validators.maxLength(6)]],
+      nuevaPassword: ['', [Validators.required, Validators.maxLength(20)]],
       confirmacionPassword: ['', [Validators.required, Validators.maxLength(20)]]
-    }, { validators: this.validarCoincidenciaPassword });
-  }
-
-  // FA03: Formato de la contraseña (mín 6, máx 20, al menos una mayúscula, un número y un carácter especial)
-  validarPasswordFormato(control: AbstractControl): ValidationErrors | null {
-    const value = control.value || '';
-    if (!value) return null;
-    const regex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>_\-])[A-Za-z\d!@#$%^&*(),.?":{}|<>_\-]{6,20}$/;
-    return regex.test(value) ? null : { passwordInvalida: true };
-  }
-
-  validarCoincidenciaPassword(group: AbstractControl): ValidationErrors | null {
-    const pass = group.get('nuevaPassword')?.value;
-    const confirm = group.get('confirmacionPassword')?.value;
-    return pass === confirm ? null : { passwordNoCoincide: true };
+    });
   }
 
   // Paso 4: Botón "ENVIAR"
   enviarCorreo(): void {
     this.limpiarMensajes();
 
-    if (this.correoForm.invalid) {
-      this.correoForm.markAllAsTouched();
+    const control = this.correoForm.get('correoElectronico');
+    const valor = control?.value?.trim() || '';
+
+    // FA01: Campo correo electrónico vacío
+    if (!valor) {
+      this.mensajeError = 'Debe ingresar un correo electrónico';
+      return;
+    }
+
+    // FA02: Formato de correo electrónico no válido
+    if (control?.invalid) {
       this.mensajeError = 'Debe ingresar un correo electrónico válido';
       return;
     }
 
-    // Paso 5 & FA01 (Mensaje de seguridad neutro genérico sin revelar existencia de cuenta)
-    this.mensajeExito = 'Se enviarán instrucciones de recuperación si el correo es válido';
+    // Paso 5 & FA03: Mensaje de seguridad neutro sin revelar si la cuenta existe
+    this.mensajeExito = 'Se enviarán instrucciones de recuperación si el correo electrónico es válido';
     this.faseCodigoEnviado = true;
   }
 
@@ -70,31 +66,53 @@ export class RecuperarPasswordComponent implements OnInit {
   validarYRestablecer(): void {
     this.limpiarMensajes();
 
-    // Verificación de código
-    const codigoControl = this.validacionForm.get('codigoRecuperacion');
-    if (!codigoControl?.value || codigoControl.value.length !== 6) {
-      this.mensajeError = 'Debe ingresar el código de recuperación de 6 caracteres';
+    const codigo = this.validacionForm.get('codigoRecuperacion')?.value?.trim() || '';
+    const pass = this.validacionForm.get('nuevaPassword')?.value || '';
+    const confirm = this.validacionForm.get('confirmacionPassword')?.value || '';
+
+    // FA04: Campo código de recuperación vacío
+    if (!codigo) {
+      this.mensajeError = 'Debe ingresar el código de recuperación';
       return;
     }
 
-    // FA03 - Formato de contraseña no válido
-    const passControl = this.validacionForm.get('nuevaPassword');
-    if (passControl?.invalid) {
-      this.mensajeError = 'El formato de la contraseña debe incluir al menos una letra mayúscula, un carácter especial y un número';
+    // FA05: Código de recuperación no válido o incorrecto
+    if (codigo.length !== 6) {
+      this.mensajeError = 'El código ingresado es incorrecto';
       return;
     }
 
-    // Coincidencia
-    if (this.validacionForm.hasError('passwordNoCoincide')) {
+    // FA07: Campos de contraseña vacíos
+    if (!pass || !confirm) {
+      this.mensajeError = 'Debe ingresar y confirmar su nueva contraseña';
+      return;
+    }
+
+    // FA08: Longitud de la contraseña fuera de rango (Mínimo 6 y Máximo 20)
+    if (pass.length < 6 || pass.length > 20) {
+      this.mensajeError = 'La contraseña debe tener entre 6 y 20 caracteres';
+      return;
+    }
+
+    // FA09: Formato de la contraseña no válido
+    if (!this.passwordPattern.test(pass)) {
+      this.mensajeError = 'El formato de la contraseña debe incluir al menos una letra mayúscula, un número y un carácter especial';
+      return;
+    }
+
+    // FA10: Las contraseñas no coinciden
+    if (pass !== confirm) {
       this.mensajeError = 'Las contraseñas ingresadas no coinciden';
       return;
     }
 
-    // Paso 9 & 10: Mensaje de éxito
-    alert('Contraseña restablecida exitosamente');
+    // Paso 9 y 10: Mensaje de confirmación en la UI
+    this.mensajeExito = 'Contraseña restablecida exitosamente. Redirigiendo...';
 
-    // Paso 11: Redirige a CU-00 (Inicio de sesión)
-    this.router.navigate(['/login']);
+    // Paso 11: Redirección automática a CU-00 (Login)
+    setTimeout(() => {
+      this.router.navigate(['/login']);
+    }, 2000);
   }
 
   private limpiarMensajes(): void {
