@@ -10,11 +10,15 @@
       <span>⚠️ {{ mensajeError }}</span>
     </div>
 
-    <!-- Mensaje informativo de cancelación (FA03) o éxito -->
+    <!-- Mensaje informativo de cancelación (FA03) -->
     <div *ngIf="mensajeInfo" class="alert alert-info">
       <span>ℹ️ {{ mensajeInfo }}</span>
     </div>
 
+    <!-- Mensaje de éxito de registro -->
+    <div *ngIf="mensajeExito" class="alert alert-success">
+      <span>✅ {{ mensajeExito }}</span>
+    </div>
 
     <form [formGroup]="registroForm">
       <div class="form-group">
@@ -34,6 +38,7 @@
           <input 
             id="fechaNacimiento" 
             type="date" 
+            [max]="fechaMaximaHoy"
             formControlName="fechaNacimiento" 
           />
         </div>
@@ -110,7 +115,7 @@
             id="password" 
             type="password" 
             maxlength="20" 
-            placeholder="Mínimo 6 caracteres"
+            placeholder="Mínimo 8 caracteres"
             formControlName="password" 
           />
         </div>

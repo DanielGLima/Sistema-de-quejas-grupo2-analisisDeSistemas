@@ -71,9 +71,34 @@
                 </span>
               </td>
               <td>
-                <button type="button" class="btn-action" (click)="verDetalle(caso)">
-                  Ver Detalle
-                </button>
+                <div class="table-actions-group">
+                  <button type="button" class="btn-action" (click)="verDetalle(caso)">
+                    Ver Detalle
+                  </button>
+
+                  <!-- CU-07: Botón visible solo si el caso se puede cancelar -->
+                  <button 
+                    *ngIf="puedeCancelar(caso)" 
+                    type="button" 
+                    class="btn-cancel" 
+                    (click)="abrirModalCancelar(caso)">
+                    Cancelar
+                  </button>
+
+                  <!-- CU-08: Botón visible si está Resuelto/Cerrado y sin evaluar -->
+                  <button 
+                    *ngIf="puedeEvaluar(caso)" 
+                    type="button" 
+                    class="btn-evaluar" 
+                    (click)="abrirModalEvaluar(caso)">
+                    Evaluar
+                  </button>
+
+                  <!-- CU-08 / FA01: Insignia si ya fue calificado -->
+                  <span *ngIf="caso.evaluacion" class="badge-evaluado" title="Caso ya evaluado">
+                    ★ {{ caso.evaluacion.calificacion }}/5
+                  </span>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -91,7 +116,7 @@
   </div>
 </div>
 
-<!-- Modal Detalle del Caso (Paso 6 y 7) -->
+<!-- Modal Detalle del Caso -->
 <div *ngIf="mostrarModalDetalle && casoSeleccionado" class="modal-backdrop">
   <div class="modal-card">
     <div class="modal-header">
@@ -133,10 +158,146 @@
         <strong>respuesta:</strong>
         <p class="box-text response">{{ casoSeleccionado.respuesta }}</p>
       </div>
+
+      <!-- Detalle del motivo si fue cancelado (CU-07) -->
+      <div class="detail-block" *ngIf="casoSeleccionado.motivoCancelacion">
+        <strong>motivo de cancelación:</strong>
+        <p class="box-text cancel-text">{{ casoSeleccionado.motivoCancelacion }}</p>
+      </div>
+
+      <!-- Detalle de la evaluación registrada (CU-08 / FA01) -->
+      <div class="detail-block" *ngIf="casoSeleccionado.evaluacion">
+        <strong>evaluación del servicio:</strong>
+        <div class="box-text evaluation-box">
+          <p class="stars-display">
+            Calificación: <strong>{{ casoSeleccionado.evaluacion.calificacion }} / 5 ★</strong>
+          </p>
+          <p *ngIf="casoSeleccionado.evaluacion.comentarios" class="comment-text">
+            <em>"{{ casoSeleccionado.evaluacion.comentarios }}"</em>
+          </p>
+        </div>
+      </div>
     </div>
 
     <div class="modal-footer">
+      <!-- CU-07: Cancelar desde detalle -->
+      <button 
+        *ngIf="puedeCancelar(casoSeleccionado)" 
+        type="button" 
+        class="btn btn-danger" 
+        (click)="cerrarModal(); abrirModalCancelar(casoSeleccionado)">
+        Cancelar Caso
+      </button>
+
+      <!-- CU-08: Evaluar desde detalle -->
+      <button 
+        *ngIf="puedeEvaluar(casoSeleccionado)" 
+        type="button" 
+        class="btn btn-evaluar-primary" 
+        (click)="cerrarModal(); abrirModalEvaluar(casoSeleccionado)">
+        Evaluar atención
+      </button>
+
       <button type="button" class="btn btn-secondary" (click)="cerrarModal()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal CU-07: Cancelar Caso -->
+<div *ngIf="mostrarModalCancelar && casoSeleccionado" class="modal-backdrop">
+  <div class="modal-card modal-confirm">
+    <div class="modal-header">
+      <h3>Cancelar Caso {{ casoSeleccionado.id }}</h3>
+      <button class="btn-close" (click)="cerrarModalCancelar()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <p class="confirm-message">
+        ¿Está seguro que desea cancelar este caso? Esta acción registrará la anulación y no podrá ser revertida.
+      </p>
+
+      <div class="form-group-cancel">
+        <label for="motivoCancel">Motivo de la cancelación (*):</label>
+        <textarea 
+          id="motivoCancel" 
+          rows="3" 
+          [(ngModel)]="motivoCancelacion" 
+          placeholder="Ingrese el motivo de la cancelación (mínimo 10 caracteres)...">
+        </textarea>
+        <small class="error-msg" *ngIf="errorMotivoCancelacion">
+          {{ errorMotivoCancelacion }}
+        </small>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" (click)="cerrarModalCancelar()">Volver</button>
+      <button type="button" class="btn btn-danger" (click)="confirmarCancelacion()">Confirmar Cancelación</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal CU-08: Evaluar Atención -->
+<div *ngIf="mostrarModalEvaluar && casoSeleccionado" class="modal-backdrop">
+  <div class="modal-card modal-evaluar-card">
+    <div class="modal-header">
+      <h3>Evaluar Atención del Caso</h3>
+      <button class="btn-close" (click)="cerrarModalEvaluar()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <p class="modal-case-ref">
+        Caso No: <strong>{{ casoSeleccionado.id }}</strong> — {{ casoSeleccionado.motivo }}
+      </p>
+
+      <!-- Mensajes de Error y Éxito -->
+      <div *ngIf="mensajeErrorEvaluar" class="alert alert-danger">
+        <span>{{ mensajeErrorEvaluar }}</span>
+      </div>
+
+      <div *ngIf="mensajeExitoEvaluar" class="alert alert-success">
+        <span>{{ mensajeExitoEvaluar }}</span>
+      </div>
+
+      <form [formGroup]="evaluacionForm" (ngSubmit)="enviarEvaluacion()">
+        <!-- Calificación Cuantitativa (1 a 5 Estrellas) -->
+        <div class="form-group-eval">
+          <label>Calificación cuantitativa (*):</label>
+          <div class="stars-selector">
+            <span 
+              *ngFor="let estrella of [1, 2, 3, 4, 5]" 
+              class="star-icon" 
+              [class.active]="estrella <= (evaluacionForm.get('calificacion')?.value || 0)"
+              (click)="seleccionarEstrella(estrella)">
+              ★
+            </span>
+          </div>
+        </div>
+
+        <!-- Comentarios y retroalimentación -->
+        <div class="form-group-eval">
+          <label for="comentariosEval">Comentarios y retroalimentación (Opcional):</label>
+          <textarea 
+            id="comentariosEval"
+            rows="4"
+            formControlName="comentarios"
+            maxlength="500"
+            placeholder="Escriba aquí sus comentarios sobre el servicio recibido...">
+          </textarea>
+          <div class="char-counter">
+            {{ evaluacionForm.get('comentarios')?.value?.length || 0 }} / 500 caracteres
+          </div>
+        </div>
+
+        <div class="modal-footer modal-footer-eval">
+          <button type="button" class="btn btn-secondary" (click)="cerrarModalEvaluar()">
+            Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary" [disabled]="!!mensajeExitoEvaluar">
+            Enviar
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
