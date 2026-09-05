@@ -1,14 +1,14 @@
 package com.sistemadequejas.repository;
 
 import com.sistemadequejas.model.Caso;
-import com.sistemadequejas.model.EvidenciaCaso;
+import com.sistemadequejas.model.HistorialEstadoCaso;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
 @Repository
-public interface EvidenciaCasoRepository extends JpaRepository<EvidenciaCaso, Integer> {
+public interface HistorialEstadoCasoRepository extends JpaRepository<HistorialEstadoCaso, Integer> {
 
-    List<EvidenciaCaso> findByCaso(Caso caso);
+    List<HistorialEstadoCaso> findByCasoOrderByFechaCambioDesc(Caso caso);
 }

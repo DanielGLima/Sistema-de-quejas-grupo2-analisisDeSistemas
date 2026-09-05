@@ -7,6 +7,8 @@ import com.sistemadequejas.dto.RecuperarSolicitarRequest;
 import com.sistemadequejas.dto.RegistroRequest;
 import com.sistemadequejas.model.RecuperacionContrasena;
 import com.sistemadequejas.model.Usuario;
+import com.sistemadequejas.service.BitacoraAuditoriaService;
+import com.sistemadequejas.service.EmailService;
 import com.sistemadequejas.service.RecuperacionContrasenaService;
 import com.sistemadequejas.service.UsuarioService;
 import jakarta.servlet.http.HttpSession;
@@ -30,6 +32,19 @@ public class AuthController {
 
     @Autowired
     private RecuperacionContrasenaService recuperacionContrasenaService;
+
+    @Autowired
+    private BitacoraAuditoriaService bitacoraAuditoriaService;
+
+    @Autowired
+    private EmailService emailService;
+
+    // CU-01, FA01.1: permite validar el correo antes de pedir la contrasena.
+    @GetMapping("/correo-disponible")
+    public ResponseEntity<Map<String, Boolean>> correoDisponible(@RequestParam String correo) {
+        boolean disponible = usuarioService.buscarPorCorreo(correo).isEmpty();
+        return ResponseEntity.ok(Map.of("disponible", disponible));
+    }
 
     // CU-01: crea la cuenta de cliente.
     @PostMapping("/registro")
@@ -77,6 +92,9 @@ public class AuthController {
     public ResponseEntity<Usuario> actualizarPerfil(@RequestBody ActualizarPerfilRequest request, HttpSession session) {
         Usuario usuario = usuarioAutenticado(session);
 
+        // FA02: el correo nuevo no debe pertenecer a otra cuenta (se valida ANTES de mutar la entidad).
+        usuarioService.validarCorreoDisponibleParaOtroUsuario(request.getCorreo(), usuario.getIdUsuario());
+
         usuario.setNombreCompleto(request.getNombreCompleto());
         usuario.setFechaNacimiento(request.getFechaNacimiento());
         usuario.setNacionalidad(request.getNacionalidad());
@@ -87,14 +105,19 @@ public class AuthController {
 
         Usuario actualizado = usuarioService.actualizarPerfil(usuario, request.getPasswordActual(), request.getPasswordNueva());
         actualizado.setContrasenaHash(null);
+
+        // CU-15: deja constancia del cambio en la bitacora de auditoria.
+        bitacoraAuditoriaService.registrarAccionUsuario(actualizado, "Actualizacion de perfil", "CU-03", "El usuario actualizo sus datos personales");
+
         return ResponseEntity.ok(actualizado);
     }
 
-    // CU-02 paso 1: genera el codigo de recuperacion.
+    // CU-02 paso 1: genera el codigo de recuperacion y lo envia por correo.
     @PostMapping("/recuperar/solicitar")
     public ResponseEntity<Map<String, String>> recuperarSolicitar(@RequestBody RecuperarSolicitarRequest request) {
         Optional<Usuario> usuarioOpt = usuarioService.buscarPorCorreo(request.getCorreo());
-        String mensaje = "Se enviaran instrucciones de recuperacion si el correo es valido";
+        // FA03: mensaje de seguridad neutro, igual exista o no la cuenta.
+        String mensaje = "Se enviaran instrucciones de recuperacion si el correo electronico es valido";
 
         if (usuarioOpt.isEmpty()) {
             return ResponseEntity.ok(Map.of("mensaje", mensaje));
@@ -102,20 +125,21 @@ public class AuthController {
 
         RecuperacionContrasena recuperacion = recuperacionContrasenaService.generarCodigo(usuarioOpt.get());
 
-        // NOTA TEMPORAL: todavia no hay servidor de correo configurado, asi que
-        // el codigo se regresa directo en la respuesta para poder probar el
-        // flujo. Quitar el campo "codigo" en cuanto se conecte un envio real.
-        return ResponseEntity.ok(Map.of(
-                "mensaje", mensaje,
-                "codigo", recuperacion.getCodigoToken()
-        ));
+        emailService.enviar(
+                request.getCorreo(),
+                "Recuperacion de contrasena - Sistema de Quejas Las Delicias",
+                "Tu codigo de recuperacion es: " + recuperacion.getCodigoToken()
+                        + "\n\nEste codigo vence en 15 minutos. Si no solicitaste este cambio, ignora este mensaje."
+        );
+
+        return ResponseEntity.ok(Map.of("mensaje", mensaje));
     }
 
     // CU-02 paso 2: valida el codigo y aplica la nueva contrasena.
     @PostMapping("/recuperar/confirmar")
     public ResponseEntity<Void> recuperarConfirmar(@RequestBody RecuperarConfirmarRequest request) {
         Usuario usuario = usuarioService.buscarPorCorreo(request.getCorreo())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El codigo o enlace ha expirado"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El codigo de recuperacion ingresado es incorrecto"));
 
         recuperacionContrasenaService.validarYConsumirCodigo(usuario, request.getCodigo());
         usuarioService.restablecerPassword(usuario, request.getPasswordNueva());

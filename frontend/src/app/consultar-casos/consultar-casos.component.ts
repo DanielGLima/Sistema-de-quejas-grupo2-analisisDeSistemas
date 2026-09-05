@@ -13,6 +13,7 @@ export interface EvaluacionCaso {
 }
 
 export interface Caso {
+  idCaso: number;
   id: string;
   tipoCaso: string;
   sucursal: string;
@@ -74,14 +75,20 @@ export class ConsultarCasosComponent implements OnInit {
   cargarCasos(): void {
     this.casoService.misCasos().subscribe(casosApi => {
       this.casos = casosApi.map(c => ({
+        idCaso: c.idCaso,
         id: c.identificadorVisible,
         tipoCaso: c.tipoCaso.nombre,
-        sucursal: c.sucursal.nombre,
+        sucursal: c.sucursal.nombreSucursal,
         motivo: c.categoriaCaso?.nombre ?? 'No aplica',
         fechaIncidente: c.fechaCreacion,
         fechaCreacion: c.fechaCreacion,
         estado: c.estadoCaso.nombre,
-        detalle: c.descripcion
+        detalle: c.descripcion,
+        evaluacion: c.evaluacion ? {
+          calificacion: c.evaluacion.calificacion,
+          comentarios: c.evaluacion.comentario,
+          fechaEvaluacion: c.evaluacion.fechaEvaluacion
+        } : undefined
       }));
 
       this.estadosDisponibles = ['Todos', ...new Set(this.casos.map(c => c.estado))];
@@ -118,9 +125,10 @@ export class ConsultarCasosComponent implements OnInit {
     this.mostrarModalDetalle = false;
   }
 
-  // Regla CU-07: Solo en estado Pendiente
+  // Regla CU-07: solo en estado "Nuevo" o "En espera" (catalogo real de estado_caso)
   puedeCancelar(caso: Caso): boolean {
-    return caso.estado?.toLowerCase() === 'pendiente';
+    const estado = caso.estado?.toLowerCase();
+    return estado === 'nuevo' || estado === 'en espera';
   }
 
   abrirModalCancelar(caso: Caso): void {
@@ -150,16 +158,26 @@ export class ConsultarCasosComponent implements OnInit {
     }
 
     if (this.casoSeleccionado) {
-      this.casoSeleccionado.estado = 'Cancelado';
-      this.casoSeleccionado.motivoCancelacion = motivoLimpio;
+      this.casoService.cancelar(this.casoSeleccionado.idCaso, motivoLimpio).subscribe({
+        next: (casoApi) => {
+          if (this.casoSeleccionado) {
+            this.casoSeleccionado.estado = casoApi.estadoCaso.nombre;
+            this.casoSeleccionado.motivoCancelacion = motivoLimpio;
 
-      const index = this.casos.findIndex(c => c.id === this.casoSeleccionado?.id);
-      if (index !== -1) {
-        this.casos[index] = { ...this.casoSeleccionado };
-      }
+            const index = this.casos.findIndex(c => c.idCaso === this.casoSeleccionado?.idCaso);
+            if (index !== -1) {
+              this.casos[index] = { ...this.casoSeleccionado };
+            }
+          }
 
-      this.aplicarFiltros();
-      this.cerrarModalCancelar();
+          this.aplicarFiltros();
+          this.cerrarModalCancelar();
+        },
+        error: (err) => {
+          // FA01: el caso ya esta en atencion y no puede cancelarse
+          this.errorMotivoCancelacion = err.error?.message ?? 'No se pudo cancelar el caso';
+        }
+      });
     }
   }
 
@@ -210,39 +228,49 @@ export class ConsultarCasosComponent implements OnInit {
     }
 
     if (this.casoSeleccionado) {
-      // Paso 8: Registro de la evaluación asociada al caso
-      this.casoSeleccionado.evaluacion = {
-        calificacion,
-        comentarios: comentarios.trim() || undefined,
-        fechaEvaluacion: new Date().toISOString()
-      };
+      this.casoService.evaluar(this.casoSeleccionado.idCaso, calificacion, comentarios.trim()).subscribe({
+        next: (evaluacionApi) => {
+          if (this.casoSeleccionado) {
+            // Paso 8: Registro de la evaluación asociada al caso
+            this.casoSeleccionado.evaluacion = {
+              calificacion: evaluacionApi.calificacion,
+              comentarios: evaluacionApi.comentario,
+              fechaEvaluacion: evaluacionApi.fechaEvaluacion
+            };
 
-      // Sincronizar en la lista general para reflejar bloqueo (Paso 10 / FA01)
-      const index = this.casos.findIndex(c => c.id === this.casoSeleccionado?.id);
-      if (index !== -1) {
-        this.casos[index] = { ...this.casoSeleccionado };
-      }
+            // Sincronizar en la lista general para reflejar bloqueo (Paso 10 / FA01)
+            const index = this.casos.findIndex(c => c.idCaso === this.casoSeleccionado?.idCaso);
+            if (index !== -1) {
+              this.casos[index] = { ...this.casoSeleccionado };
+            }
+          }
 
-      this.aplicarFiltros();
+          this.aplicarFiltros();
 
-      // Paso 9: Mensaje de éxito exacto
-      this.mensajeExitoEvaluar = 'Gracias por evaluar nuestro servicio';
+          // Paso 9: Mensaje de éxito exacto
+          this.mensajeExitoEvaluar = 'Gracias por evaluar nuestro servicio';
 
-      // Paso 10: Cierre del modal tras confirmación
-      setTimeout(() => {
-        this.cerrarModalEvaluar();
-      }, 1500);
+          // Paso 10: Cierre del modal tras confirmación
+          setTimeout(() => {
+            this.cerrarModalEvaluar();
+          }, 1500);
+        },
+        error: (err) => {
+          this.mensajeErrorEvaluar = err.error?.message ?? 'No se pudo registrar la evaluación';
+        }
+      });
     }
   }
 
   obtenerClaseEstado(estado: string): string {
     switch (estado?.toLowerCase()) {
-      case 'pendiente': return 'badge-pendiente';
+      case 'nuevo': return 'badge-pendiente';
+      case 'en espera': return 'badge-pendiente';
       case 'en proceso': return 'badge-proceso';
       case 'resuelto': return 'badge-resuelto';
       case 'cerrado': return 'badge-resuelto';
-      case 'rechazado': return 'badge-rechazado';
-      case 'cancelado': return 'badge-cancelado';
+      case 'cancelado por el usuario': return 'badge-cancelado';
+      case 'reapertura solicitada': return 'badge-rechazado';
       default: return 'badge-default';
     }
   }

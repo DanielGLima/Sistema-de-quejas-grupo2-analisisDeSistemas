@@ -103,6 +103,12 @@
 
     .form-group {
       flex: 1;
+
+      // Reserva la misma altura para el label sin importar si el texto
+      // hace o no salto de línea, para que los inputs queden alineados.
+      label {
+        min-height: 2.2em;
+      }
     }
 
     .codigo-area {

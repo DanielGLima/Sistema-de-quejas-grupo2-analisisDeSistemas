@@ -42,6 +42,13 @@ export class AuthService {
     return this.http.post<Usuario>(`${API_BASE_URL}/auth/registro`, datos, { withCredentials: true });
   }
 
+  // CU-01, FA01.1
+  correoDisponible(correo: string): Observable<{ disponible: boolean }> {
+    return this.http.get<{ disponible: boolean }>(`${API_BASE_URL}/auth/correo-disponible`, {
+      params: { correo }
+    });
+  }
+
   // CU-00
   login(correo: string, password: string): Observable<Usuario> {
     return this.http.post<Usuario>(`${API_BASE_URL}/auth/login`, { correo, password }, { withCredentials: true });

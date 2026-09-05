@@ -59,6 +59,10 @@ public class Caso {
     @Column(name = "fecha_actualizacion", nullable = false)
     private LocalDateTime fechaActualizacion = LocalDateTime.now();
 
+    // CU-08: expone la evaluacion del caso si ya existe (relacion 1 a 1 opcional).
+    @OneToOne(mappedBy = "caso", fetch = FetchType.LAZY)
+    private EvaluacionCaso evaluacion;
+
     public Caso() {
     }
 
@@ -172,5 +176,13 @@ public class Caso {
 
     public void setFechaActualizacion(LocalDateTime fechaActualizacion) {
         this.fechaActualizacion = fechaActualizacion;
+    }
+
+    public EvaluacionCaso getEvaluacion() {
+        return evaluacion;
+    }
+
+    public void setEvaluacion(EvaluacionCaso evaluacion) {
+        this.evaluacion = evaluacion;
     }
 }

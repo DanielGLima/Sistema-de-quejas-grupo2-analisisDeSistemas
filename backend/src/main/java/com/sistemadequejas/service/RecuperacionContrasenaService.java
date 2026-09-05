@@ -16,7 +16,8 @@ public class RecuperacionContrasenaService {
 
     private static final String CARACTERES = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private static final int LONGITUD_CODIGO = 6;
-    private static final int MINUTOS_EXPIRACION = 20;
+    // CU-02, requerimiento no funcional "Expiracion": ej. 15 minutos.
+    private static final int MINUTOS_EXPIRACION = 15;
 
     private final SecureRandom random = new SecureRandom();
 
@@ -38,13 +39,14 @@ public class RecuperacionContrasenaService {
     }
 
     // CU-02: valida el codigo ingresado y lo marca como usado.
+    // FA05 (codigo incorrecto) y FA06 (codigo expirado) son mensajes distintos.
     public void validarYConsumirCodigo(Usuario usuario, String codigo) {
         RecuperacionContrasena recuperacion = recuperacionContrasenaRepository
                 .findFirstByUsuarioAndCodigoTokenAndUsadoFalseOrderByFechaCreacionDesc(usuario, codigo)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El codigo o enlace ha expirado"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El codigo de recuperacion ingresado es incorrecto"));
 
         if (recuperacion.getFechaExpiracion().isBefore(LocalDateTime.now())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El codigo o enlace ha expirado");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El codigo de recuperacion ha expirado. Solicite uno nuevo");
         }
 
         recuperacion.setUsado(true);

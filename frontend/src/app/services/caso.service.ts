@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../core/api-config';
-import { Caso, NuevoCasoRequest } from '../core/models/caso';
+import { Caso, EvaluacionCasoApi, NuevoCasoRequest } from '../core/models/caso';
 
 @Injectable({ providedIn: 'root' })
 export class CasoService {
@@ -33,5 +33,15 @@ export class CasoService {
   // CU-06
   misCasos(): Observable<Caso[]> {
     return this.http.get<Caso[]>(`${API_BASE_URL}/casos/mios`, { withCredentials: true });
+  }
+
+  // CU-07
+  cancelar(idCaso: number, motivo: string): Observable<Caso> {
+    return this.http.put<Caso>(`${API_BASE_URL}/casos/${idCaso}/cancelar`, { motivo }, { withCredentials: true });
+  }
+
+  // CU-08
+  evaluar(idCaso: number, calificacion: number, comentario: string): Observable<EvaluacionCasoApi> {
+    return this.http.post<EvaluacionCasoApi>(`${API_BASE_URL}/casos/${idCaso}/evaluacion`, { calificacion, comentario }, { withCredentials: true });
   }
 }

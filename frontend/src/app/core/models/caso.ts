@@ -1,3 +1,10 @@
+export interface EvaluacionCasoApi {
+  idEvaluacion: number;
+  calificacion: number;
+  comentario?: string;
+  fechaEvaluacion: string;
+}
+
 export interface Caso {
   idCaso: number;
   identificadorVisible: string;
@@ -7,10 +14,12 @@ export interface Caso {
   esAnonimo: boolean;
   fechaCreacion: string;
   fechaActualizacion: string;
-  sucursal: { idSucursal: number; nombre: string };
+  // Sucursal usa nombreSucursal (no "nombre") porque asi quedo mapeada la entidad en el backend.
+  sucursal: { idSucursal: number; nombreSucursal: string };
   tipoCaso: { idTipoCaso: number; nombre: string };
   categoriaCaso?: { idCategoria: number; nombre: string };
   estadoCaso: { idEstado: number; nombre: string };
+  evaluacion?: EvaluacionCasoApi;
 }
 
 export interface NuevoCasoRequest {

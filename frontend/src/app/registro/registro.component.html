@@ -23,23 +23,26 @@
     <form [formGroup]="registroForm">
       <div class="form-group">
         <label for="nombreCompleto">nombre completo</label>
-        <input 
-          id="nombreCompleto" 
-          type="text" 
-          maxlength="100" 
+        <input
+          id="nombreCompleto"
+          type="text"
+          maxlength="100"
           placeholder="Ingrese su nombre completo"
-          formControlName="nombreCompleto" 
+          formControlName="nombreCompleto"
+          (input)="soloTexto($event)"
         />
       </div>
 
       <div class="form-row">
         <div class="form-group">
           <label for="fechaNacimiento">fecha de nacimiento</label>
-          <input 
-            id="fechaNacimiento" 
-            type="date" 
-            [max]="fechaMaximaHoy"
-            formControlName="fechaNacimiento" 
+          <input
+            id="fechaNacimiento"
+            type="text"
+            maxlength="10"
+            placeholder="dd/mm/aaaa"
+            formControlName="fechaNacimiento"
+            (input)="formatearFecha($event)"
           />
         </div>
 
@@ -65,24 +68,28 @@
 
       <div class="form-row">
         <div class="form-group codigo-area">
-          <label for="codigoArea">código de área telefónico</label>
-          <input 
-            id="codigoArea" 
-            type="text" 
-            maxlength="4" 
+          <label for="codigoArea">código de área</label>
+          <input
+            id="codigoArea"
+            type="text"
+            inputmode="numeric"
+            maxlength="4"
             placeholder="ej 502"
-            formControlName="codigoArea" 
+            formControlName="codigoArea"
+            (input)="soloNumeros($event, 'codigoArea')"
           />
         </div>
 
         <div class="form-group telefono">
           <label for="telefono">teléfono (8 dígitos)</label>
-          <input 
-            id="telefono" 
-            type="text" 
-            maxlength="8" 
+          <input
+            id="telefono"
+            type="text"
+            inputmode="numeric"
+            maxlength="8"
             placeholder="12345678"
-            formControlName="telefono" 
+            formControlName="telefono"
+            (input)="soloNumeros($event, 'telefono')"
           />
         </div>
       </div>
@@ -99,8 +106,8 @@
       </div>
 
       <!-- Paso 4: Botón Crear nueva cuenta para habilitar ingreso de contraseña -->
-      <button *ngIf="!pasoPassword" type="button" class="btn btn-primary" (click)="habilitarPassword()">
-        Crear nueva cuenta
+      <button *ngIf="!pasoPassword" type="button" class="btn btn-primary" [disabled]="verificandoCorreo" (click)="habilitarPassword()">
+        {{ verificandoCorreo ? 'Verificando correo...' : 'Crear nueva cuenta' }}
       </button>
 
       <!-- Paso 5: Ingreso y confirmación de contraseña -->
