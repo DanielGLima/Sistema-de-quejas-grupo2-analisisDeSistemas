@@ -1,6 +1,7 @@
 package com.sistemadequejas.controller;
 
 import com.sistemadequejas.dto.CancelarCasoRequest;
+import com.sistemadequejas.dto.CasoDetalleResponse;
 import com.sistemadequejas.dto.EvaluarCasoRequest;
 import com.sistemadequejas.model.*;
 import com.sistemadequejas.service.*;
@@ -46,6 +47,9 @@ public class CasoController {
     private EstadoCasoService estadoCasoService;
 
     @Autowired
+    private HistorialEstadoCasoService historialEstadoCasoService;
+
+    @Autowired
     private BitacoraAuditoriaService bitacoraAuditoriaService;
 
     @Autowired
@@ -61,12 +65,17 @@ public class CasoController {
         return casoService.findByUsuario(usuario);
     }
 
+    // CU-06, paso 5: detalle completo con evidencias e historial de cambios de estado.
     @GetMapping("/{id}")
-    public ResponseEntity<Caso> obtener(@PathVariable Integer id, HttpSession session) {
+    public ResponseEntity<CasoDetalleResponse> obtener(@PathVariable Integer id, HttpSession session) {
         Usuario usuario = usuarioAutenticado(session);
         return casoService.findById(id)
                 .filter(caso -> caso.getUsuario().getIdUsuario().equals(usuario.getIdUsuario()))
-                .map(ResponseEntity::ok)
+                .map(caso -> ResponseEntity.ok(new CasoDetalleResponse(
+                        caso,
+                        evidenciaCasoService.findByCaso(caso),
+                        historialEstadoCasoService.findByCaso(caso)
+                )))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
@@ -75,7 +84,7 @@ public class CasoController {
     public ResponseEntity<Caso> crear(
             @RequestParam Integer idTipoCaso,
             @RequestParam Integer idSucursal,
-            @RequestParam(required = false) Integer idCategoria,
+            @RequestParam Integer idCategoria,
             @RequestParam String descripcion,
             @RequestParam(required = false) String numeroFactura,
             @RequestParam(required = false) String nombreEmpleadoInvolucrado,
@@ -85,7 +94,7 @@ public class CasoController {
 
         Usuario usuario = usuarioAutenticado(session);
 
-        // FA01: campos obligatorios (descripcion 10-1000 caracteres, al menos una evidencia).
+        // FA01: campos obligatorios (categoria del servicio, descripcion 10-1000 caracteres, al menos una evidencia).
         if (descripcion == null || descripcion.trim().length() < 10 || archivos == null || archivos.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe ingresar los campos obligatorios");
         }
@@ -99,9 +108,8 @@ public class CasoController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe ingresar los campos obligatorios"));
         Sucursal sucursal = sucursalService.findById(idSucursal)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe ingresar los campos obligatorios"));
-        CategoriaCaso categoriaCaso = idCategoria != null
-                ? categoriaCasoService.findById(idCategoria).orElse(null)
-                : null;
+        CategoriaCaso categoriaCaso = categoriaCasoService.findById(idCategoria)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe ingresar los campos obligatorios"));
         EstadoCaso estadoNuevo = estadoCasoService.findByNombre("Nuevo")
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Catalogo de estados no inicializado"));
 

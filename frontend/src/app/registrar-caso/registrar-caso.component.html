@@ -33,11 +33,11 @@
         </select>
       </div>
 
-      <!-- categoría (aplica principalmente a Quejas y Reclamos) -->
+      <!-- categoría del servicio -->
       <div class="form-group">
-        <label for="idCategoria">categoría (opcional)</label>
+        <label for="idCategoria">categoría del servicio</label>
         <select id="idCategoria" formControlName="idCategoria">
-          <option value="">No aplica</option>
+          <option value="" disabled selected>Seleccione una categoría</option>
           <option *ngFor="let cat of categorias" [value]="cat.idCategoria">{{ cat.nombre }}</option>
         </select>
       </div>
@@ -88,7 +88,7 @@
 
       <!-- adjuntar evidencias -->
       <div class="form-group">
-        <label for="archivos">adjuntar evidencias (opcional, PDF/JPG/PNG máx 2MB por archivo)</label>
+        <label for="archivos">adjuntar evidencias (PDF/JPG/PNG máx 2MB por archivo)</label>
         <input
           id="archivos"
           type="file"

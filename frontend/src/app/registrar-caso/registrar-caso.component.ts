@@ -45,7 +45,7 @@ export class RegistrarCasoComponent implements OnInit {
     this.casoForm = this.fb.group({
       idTipoCaso: ['', Validators.required],
       idSucursal: ['', Validators.required],
-      idCategoria: [''],
+      idCategoria: ['', Validators.required],
       descripcion: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(1000)]],
       numeroFactura: ['', Validators.maxLength(20)],
       nombreEmpleadoInvolucrado: ['', Validators.maxLength(100)],
@@ -84,7 +84,7 @@ export class RegistrarCasoComponent implements OnInit {
     this.mensajeError = '';
     this.mensajeInfo = '';
 
-    if (this.casoForm.invalid) {
+    if (this.casoForm.invalid || this.archivosSeleccionados.length === 0) {
       this.casoForm.markAllAsTouched();
       this.mensajeError = 'Debe ingresar los campos obligatorios';
       return;
