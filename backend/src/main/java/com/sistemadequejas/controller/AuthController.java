@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -113,17 +112,15 @@ public class AuthController {
     }
 
     // CU-02 paso 1: genera el codigo de recuperacion y lo envia por correo.
+    // NOTA: por pedido explicito del usuario, aqui SI se revela si el correo
+    // esta registrado o no (diferente del mensaje neutro que indica el FA03
+    // original del documento; el documento se esta actualizando aparte).
     @PostMapping("/recuperar/solicitar")
     public ResponseEntity<Map<String, String>> recuperarSolicitar(@RequestBody RecuperarSolicitarRequest request) {
-        Optional<Usuario> usuarioOpt = usuarioService.buscarPorCorreo(request.getCorreo());
-        // FA03: mensaje de seguridad neutro, igual exista o no la cuenta.
-        String mensaje = "Se enviaran instrucciones de recuperacion si el correo electronico es valido";
+        Usuario usuario = usuarioService.buscarPorCorreo(request.getCorreo())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Correo no registrado"));
 
-        if (usuarioOpt.isEmpty()) {
-            return ResponseEntity.ok(Map.of("mensaje", mensaje));
-        }
-
-        RecuperacionContrasena recuperacion = recuperacionContrasenaService.generarCodigo(usuarioOpt.get());
+        RecuperacionContrasena recuperacion = recuperacionContrasenaService.generarCodigo(usuario);
 
         emailService.enviar(
                 request.getCorreo(),
@@ -132,7 +129,7 @@ public class AuthController {
                         + "\n\nEste codigo vence en 15 minutos. Si no solicitaste este cambio, ignora este mensaje."
         );
 
-        return ResponseEntity.ok(Map.of("mensaje", mensaje));
+        return ResponseEntity.ok(Map.of("mensaje", "Se enviaron instrucciones de recuperacion a tu correo"));
     }
 
     // CU-02 paso 2: valida el codigo y aplica la nueva contrasena.

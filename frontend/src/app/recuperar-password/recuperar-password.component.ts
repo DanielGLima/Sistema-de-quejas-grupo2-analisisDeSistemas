@@ -63,13 +63,11 @@ export class RecuperarPasswordComponent implements OnInit {
 
     this.authService.recuperarSolicitar(this.correoIngresado).subscribe({
       next: (respuesta) => {
-        // Paso 5 & FA01 (Mensaje de seguridad neutro genérico sin revelar existencia de cuenta)
-        this.mensajeExito = respuesta.codigo
-          ? `${respuesta.mensaje} (código de prueba, sin envío de correo real todavía: ${respuesta.codigo})`
-          : respuesta.mensaje;
+        this.mensajeExito = respuesta.mensaje;
         this.faseCodigoEnviado = true;
       },
       error: (err) => {
+        // Ej. "Correo no registrado" cuando el correo no existe en la BD
         this.mensajeError = err.error?.message ?? 'No se pudo procesar la solicitud';
       }
     });
@@ -133,7 +131,7 @@ export class RecuperarPasswordComponent implements OnInit {
       },
       error: (err) => {
         // FA02: código o enlace expirado
-        this.mensajeError = err.error?.message ?? 'El código o enlace ha expirado';
+        this.mensajeError = err.error?.message ?? 'El código es incorrecto';
       }
     });
   }

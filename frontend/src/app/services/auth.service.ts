@@ -29,7 +29,6 @@ export interface ActualizarPerfilRequest {
 
 export interface RecuperarSolicitarResponse {
   mensaje: string;
-  codigo?: string;
 }
 
 @Injectable({ providedIn: 'root' })
