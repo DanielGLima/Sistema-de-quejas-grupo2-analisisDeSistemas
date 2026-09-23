@@ -10,13 +10,19 @@ export const routes: Routes = [
   // Redirección inicial
   { path: '', redirectTo: 'login', pathMatch: 'full' },
 
-  // Módulos del Cliente (CU-00 a CU-06)
+  // Módulos del Cliente (CU-00 a CU-09)
   { path: 'login', component: LoginComponent },
   { path: 'registro', component: RegistroComponent },
   { path: 'recuperar-password', component: RecuperarPasswordComponent },
   { path: 'actualizar-perfil', component: ActualizarPerfilComponent },
   { path: 'registrar-caso', component: RegistrarCasoComponent },
   { path: 'consultar-casos', component: ConsultarCasosComponent },
+
+  // Panel Administrativo (CU-10)
+  { 
+    path: 'gestionar-casos', 
+    loadComponent: () => import('./gestionar-casos/gestionar-casos').then(m => m.GestionarCasosComponent) 
+  },
 
   // Ruta comodín (por si se ingresa una URL inexistente)
   { path: '**', redirectTo: 'login' }

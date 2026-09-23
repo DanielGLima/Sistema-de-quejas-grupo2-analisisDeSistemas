@@ -1,0 +1,493 @@
+<app-navbar></app-navbar>
+
+<div class="page-wrapper">
+  <div class="admin-container">
+    
+    <!-- CU-14: Notificación Automática Flotante (Toast) -->
+    <div *ngIf="notificacionAlerta" class="toast-notificacion">
+      <div class="toast-icon">📧</div>
+      <div class="toast-content">
+        <span class="toast-title">Notificación Automática Enviada (CU-14)</span>
+        <p class="toast-text"><strong>{{ notificacionAlerta.asunto }}</strong></p>
+        <small class="toast-meta">Destino: {{ notificacionAlerta.destinatarioEmail }} | {{ notificacionAlerta.estadoEnvio }}</small>
+      </div>
+    </div>
+
+    <!-- Encabezado con accesos a CU-14 y CU-15 -->
+    <div class="header-section">
+      <div>
+        <h2>Panel de Gestión y Respuesta de Casos</h2>
+        <p class="subtitle">Restaurante Las Delicias — CU-10 / CU-11 / CU-12 / CU-13 / CU-14 / CU-15</p>
+      </div>
+      <div class="header-actions">
+        <button type="button" class="btn-notificaciones-log" (click)="abrirModalNotificaciones()" title="Ver historial de notificaciones generadas">
+          📬 Notificaciones ({{ notifService.obtenerHistorial().length }})
+        </button>
+        <button type="button" class="btn-auditoria-log" (click)="abrirModalAuditoria()" title="Consultar bitácora inalterable del sistema">
+          🛡️ Bitácora ({{ auditoriaService.obtenerBitacora().length }})
+        </button>
+        <span class="role-badge">Rol: Administrador / Gerente</span>
+      </div>
+    </div>
+
+    <!-- CU-12: Filtros de Búsqueda -->
+    <div class="filters-card">
+      <div class="filters-grid">
+        <div class="filter-item full-width">
+          <label for="buscarTexto">Buscar por código, motivo o palabra clave:</label>
+          <input 
+            type="text" 
+            id="buscarTexto" 
+            [(ngModel)]="filtroTexto" 
+            (input)="aplicarFiltros()" 
+            placeholder="Ej. QUE-2026-001, alimentos, factura..." />
+        </div>
+
+        <div class="filter-item">
+          <label for="filtroSucursal">Sucursal:</label>
+          <select id="filtroSucursal" [(ngModel)]="filtroSucursal" (change)="aplicarFiltros()">
+            <option *ngFor="let suc of sucursalesDisponibles" [value]="suc">{{ suc }}</option>
+          </select>
+        </div>
+
+        <div class="filter-item">
+          <label for="filtroTipo">Tipo de caso:</label>
+          <select id="filtroTipo" [(ngModel)]="filtroTipo" (change)="aplicarFiltros()">
+            <option *ngFor="let t of tiposDisponibles" [value]="t">{{ t }}</option>
+          </select>
+        </div>
+
+        <div class="filter-item">
+          <label for="filtroEstado">Estado:</label>
+          <select id="filtroEstado" [(ngModel)]="filtroEstado" (change)="aplicarFiltros()">
+            <option *ngFor="let est of estadosFiltroDisponibles" [value]="est">{{ est }}</option>
+          </select>
+        </div>
+
+        <div class="filter-item">
+          <label for="filtroResponsable">Responsable asignado:</label>
+          <select id="filtroResponsable" [(ngModel)]="filtroResponsable" (change)="aplicarFiltros()">
+            <option *ngFor="let resp of responsablesFiltroDisponibles" [value]="resp">{{ resp }}</option>
+          </select>
+        </div>
+
+        <div class="filter-item">
+          <label for="filtroDesde">Fecha creación desde:</label>
+          <input type="date" id="filtroDesde" [(ngModel)]="filtroFechaDesde" (change)="aplicarFiltros()" />
+        </div>
+
+        <div class="filter-item">
+          <label for="filtroHasta">Fecha creación hasta:</label>
+          <input type="date" id="filtroHasta" [(ngModel)]="filtroFechaHasta" (change)="aplicarFiltros()" />
+        </div>
+      </div>
+
+      <div class="filter-actions">
+        <span class="results-counter">
+          Mostrando <strong>{{ casosFiltrados.length }}</strong> de <strong>{{ casos.length }}</strong> casos
+        </span>
+        <button type="button" class="btn-clear" (click)="limpiarFiltros()">
+          Limpiar Filtros
+        </button>
+      </div>
+    </div>
+
+    <!-- Tabla de Casos -->
+    <div class="table-card">
+      <div class="table-responsive" *ngIf="casosFiltrados.length > 0; else sinCasosAdmin">
+        <table class="casos-table">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Tipo</th>
+              <th>Sucursal</th>
+              <th>Categoría</th>
+              <th>Fecha</th>
+              <th>Estado Actual</th>
+              <th>Responsable</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let caso of casosFiltrados">
+              <td class="code-col">{{ caso.id }}</td>
+              <td>{{ caso.tipoCaso }}</td>
+              <td>{{ caso.sucursal }}</td>
+              <td>{{ caso.categoria }}</td>
+              <td>{{ caso.fechaCreacion }}</td>
+              <td>
+                <span class="badge" [ngClass]="obtenerClaseEstado(caso.estado)">
+                  {{ caso.estado }}
+                </span>
+              </td>
+              <td>
+                <div class="responsable-cell">
+                  <span>{{ caso.empleadoAsignado || 'Sin asignar' }}</span>
+                  <small *ngIf="caso.historialReasignaciones && caso.historialReasignaciones.length > 0" class="tag-reasignado" title="Reasignaciones">
+                    🔄 ({{ caso.historialReasignaciones.length }})
+                  </small>
+                </div>
+              </td>
+              <td>
+                <div class="actions-wrapper">
+                  <!-- CU-10: Gestionar Estado -->
+                  <button type="button" class="btn-action-primary" (click)="abrirModalGestion(caso)">
+                    Gestionar
+                  </button>
+
+                  <!-- CU-13: Reasignar Caso -->
+                  <button 
+                    *ngIf="puedeReasignar(caso)" 
+                    type="button" 
+                    class="btn-action-warning" 
+                    (click)="abrirModalReasignar(caso)">
+                    Reasignar
+                  </button>
+
+                  <!-- CU-11: Responder Caso -->
+                  <button 
+                    *ngIf="puedeResponder(caso)" 
+                    type="button" 
+                    class="btn-action-success" 
+                    (click)="abrirModalResponder(caso)">
+                    Responder
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <ng-template #sinCasosAdmin>
+        <div class="empty-state">
+          <div class="empty-icon">🔍</div>
+          <h3>No se encontraron casos</h3>
+          <p>Ningún caso coincide con los criterios de búsqueda y filtros seleccionados.</p>
+          <button type="button" class="btn-action-primary" (click)="limpiarFiltros()">Restablecer filtros</button>
+        </div>
+      </ng-template>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal CU-10: Gestionar Estado de Casos -->
+<div *ngIf="mostrarModalGestion && casoSeleccionado" class="modal-backdrop">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Gestionar Caso: {{ casoSeleccionado.id }}</h3>
+      <button class="btn-close" (click)="cerrarModal()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="info-box">
+        <p><strong>Tipo:</strong> {{ casoSeleccionado.tipoCaso }} | <strong>Categoría:</strong> {{ casoSeleccionado.categoria }}</p>
+        <p><strong>Sucursal:</strong> {{ casoSeleccionado.sucursal }}</p>
+        <p><strong>Motivo inicial:</strong> {{ casoSeleccionado.motivo }}</p>
+        <p><strong>Detalle:</strong> {{ casoSeleccionado.detalle }}</p>
+        <p><strong>Notificación asociada a:</strong> {{ casoSeleccionado.correoCliente }}</p>
+      </div>
+
+      <div *ngIf="casoSeleccionado.estado === 'Reapertura solicitada'" class="alert-reapertura">
+        <strong>Dictamen de Reapertura Requerido (FA04):</strong>
+        <p class="reapertura-motivo"><em>"{{ casoSeleccionado.motivoReapertura }}"</em></p>
+        <small>Debe dictaminar si reactiva a <strong>En Proceso</strong> o ratifica como <strong>Cerrado</strong>.</small>
+      </div>
+
+      <div *ngIf="mensajeError" class="alert alert-danger">{{ mensajeError }}</div>
+      <div *ngIf="mensajeExito" class="alert alert-success">{{ mensajeExito }}</div>
+
+      <form [formGroup]="gestionForm" (ngSubmit)="guardarGestion()">
+        <div class="form-group">
+          <label for="empleado">Empleado responsable asignado (Opcional):</label>
+          <select id="empleado" formControlName="empleadoAsignado">
+            <option value="">-- Sin asignar --</option>
+            <option *ngFor="let emp of empleados" [value]="emp">{{ emp }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="estado">Nuevo estado del caso (*):</label>
+          <select id="estado" formControlName="nuevoEstado">
+            <option value="" disabled>-- Seleccione un estado permitido --</option>
+            <option *ngFor="let est of estadosPermitidos" [value]="est">{{ est }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="notas">Observaciones y notas internas (Máx. 500 car. - Opcional):</label>
+          <textarea 
+            id="notas" 
+            rows="3" 
+            formControlName="notasInternas" 
+            maxlength="500" 
+            placeholder="Ingrese anotaciones internas...">
+          </textarea>
+          <small class="char-count">{{ gestionForm.get('notasInternas')?.value?.length || 0 }} / 500</small>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="cerrarModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary" [disabled]="!!mensajeExito">Guardar Cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal CU-11: Responder Caso Oficialmente -->
+<div *ngIf="mostrarModalResponder && casoSeleccionado" class="modal-backdrop">
+  <div class="modal-card modal-responder">
+    <div class="modal-header">
+      <h3>Emitir Respuesta Oficial — {{ casoSeleccionado.id }}</h3>
+      <button class="btn-close" (click)="cerrarModalResponder()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="info-box">
+        <p><strong>Caso:</strong> {{ casoSeleccionado.motivo }} ({{ casoSeleccionado.sucursal }})</p>
+        <p><strong>Destinatario cliente:</strong> {{ casoSeleccionado.correoCliente }}</p>
+      </div>
+
+      <div *ngIf="mensajeErrorRespuesta" class="alert alert-danger">{{ mensajeErrorRespuesta }}</div>
+      <div *ngIf="mensajeExitoRespuesta" class="alert alert-success">{{ mensajeExitoRespuesta }}</div>
+
+      <form [formGroup]="respuestaForm" (ngSubmit)="enviarRespuesta()">
+        <div class="form-group">
+          <label for="tituloRespuesta">Título o resumen de la respuesta (*):</label>
+          <input 
+            type="text" 
+            id="tituloRespuesta" 
+            formControlName="titulo" 
+            maxlength="100" 
+            placeholder="Ej. Resolución formal sobre la orden y compensación aplicada" />
+          <small class="char-count">{{ respuestaForm.get('titulo')?.value?.length || 0 }} / 100</small>
+        </div>
+
+        <div class="form-group">
+          <label for="cuerpoRespuesta">Cuerpo de la respuesta oficial / Acciones tomadas (*):</label>
+          <textarea 
+            id="cuerpoRespuesta" 
+            rows="4" 
+            formControlName="cuerpo" 
+            maxlength="1000" 
+            placeholder="Describa de forma clara las medidas adoptadas (mínimo 20 caracteres)...">
+          </textarea>
+          <small class="char-count">{{ respuestaForm.get('cuerpo')?.value?.length || 0 }} / 1000 (mín. 20)</small>
+        </div>
+
+        <div class="form-group">
+          <label for="compensacion">Acciones de compensación / Seguimiento (Opcional):</label>
+          <input 
+            type="text" 
+            id="compensacion" 
+            formControlName="compensacion" 
+            maxlength="300" 
+            placeholder="Ej. Emisión de cupón o cortesía" />
+          <small class="char-count">{{ respuestaForm.get('compensacion')?.value?.length || 0 }} / 300</small>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="cerrarModalResponder()">Cancelar</button>
+          <button type="submit" class="btn btn-success" [disabled]="!!mensajeExitoRespuesta">Enviar Respuesta Oficial</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal CU-13: Reasignar Caso -->
+<div *ngIf="mostrarModalReasignar && casoSeleccionado" class="modal-backdrop">
+  <div class="modal-card modal-reasignar">
+    <div class="modal-header">
+      <h3>Reasignar Caso: {{ casoSeleccionado.id }}</h3>
+      <button class="btn-close" (click)="cerrarModalReasignar()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="info-box">
+        <p><strong>Caso:</strong> {{ casoSeleccionado.motivo }}</p>
+        <p><strong>Responsable actual:</strong> <span class="badge-responsable-actual">{{ casoSeleccionado.empleadoAsignado }}</span></p>
+        <p><strong>Estado:</strong> {{ casoSeleccionado.estado }}</p>
+      </div>
+
+      <div *ngIf="casoSeleccionado.historialReasignaciones && casoSeleccionado.historialReasignaciones.length > 0" class="historial-box">
+        <p class="historial-title">Historial previo de transferencias:</p>
+        <ul class="historial-list">
+          <li *ngFor="let h of casoSeleccionado.historialReasignaciones">
+            <small>{{ h.fecha | date:'dd/MM/yyyy HH:mm' }}:</small>
+            <span>De <strong>{{ h.responsableAnterior }}</strong> a <strong>{{ h.responsableNuevo }}</strong></span>
+            <p class="historial-motivo"><em>"{{ h.motivo }}"</em></p>
+          </li>
+        </ul>
+      </div>
+
+      <div *ngIf="mensajeErrorReasignar" class="alert alert-danger">{{ mensajeErrorReasignar }}</div>
+      <div *ngIf="mensajeExitoReasignar" class="alert alert-success">{{ mensajeExitoReasignar }}</div>
+
+      <form [formGroup]="reasignarForm" (ngSubmit)="guardarReasignacion()">
+        <div class="form-group">
+          <label for="nuevoResponsable">Nuevo empleado responsable (*):</label>
+          <select id="nuevoResponsable" formControlName="nuevoResponsable">
+            <option value="" disabled>-- Seleccione un nuevo encargado --</option>
+            <option *ngFor="let emp of empleadosReasignables" [value]="emp">{{ emp }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="motivoReasig">Motivo de la reasignación (*):</label>
+          <textarea 
+            id="motivoReasig" 
+            rows="3" 
+            formControlName="motivoReasignacion" 
+            maxlength="300" 
+            placeholder="Indique el justificativo de la transferencia (mínimo 10 caracteres)...">
+          </textarea>
+          <small class="char-count">{{ reasignarForm.get('motivoReasignacion')?.value?.length || 0 }} / 300 (mín. 10)</small>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="cerrarModalReasignar()">Cancelar</button>
+          <button type="submit" class="btn btn-warning-dark" [disabled]="!!mensajeExitoReasignar">Confirmar Reasignación</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal CU-14: Notificaciones Automáticas -->
+<div *ngIf="mostrarModalNotificaciones" class="modal-backdrop">
+  <div class="modal-card modal-notificaciones">
+    <div class="modal-header">
+      <h3>Bandeja de Notificaciones Automáticas (CU-14)</h3>
+      <button class="btn-close" (click)="cerrarModalNotificaciones()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <p class="notif-modal-desc">
+        Registro auditable de notificaciones disparadas por eventos de cambio de estado, respuesta oficial o reasignación.
+      </p>
+
+      <div *ngIf="notifService.obtenerHistorial().length === 0" class="empty-state-notifs">
+        <p>Aún no se han disparado notificaciones automáticas en esta sesión.</p>
+      </div>
+
+      <div class="notif-table-wrapper" *ngIf="notifService.obtenerHistorial().length > 0">
+        <table class="notif-table">
+          <thead>
+            <tr>
+              <th>Caso</th>
+              <th>Destinatario</th>
+              <th>Rol</th>
+              <th>Asunto</th>
+              <th>Fecha/Hora</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let n of notifService.obtenerHistorial()">
+              <td><strong>{{ n.codigoCaso }}</strong></td>
+              <td>{{ n.destinatarioEmail }}</td>
+              <td><span class="role-pill">{{ n.destinatarioRol }}</span></td>
+              <td class="asunto-col" [title]="n.cuerpo">{{ n.asunto }}</td>
+              <td><small>{{ n.fechaHora }}</small></td>
+              <td>
+                <span class="badge-notif" [ngClass]="n.estadoEnvio === 'Enviado' ? 'badge-notif-enviado' : 'badge-notif-fallido'">
+                  {{ n.estadoEnvio }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="cerrarModalNotificaciones()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal CU-15: Bitácora de Auditoría -->
+<div *ngIf="mostrarModalAuditoria" class="modal-backdrop">
+  <div class="modal-card modal-auditoria">
+    <div class="modal-header">
+      <h3>🛡️ Bitácora de Auditoría del Sistema (CU-15)</h3>
+      <button class="btn-close" (click)="cerrarModalAuditoria()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <p class="notif-modal-desc">
+        Mecanismo transversal de trazabilidad inalterable. Registra usuario, rol, IP, operación y marca temporal exacta con milisegundos.
+      </p>
+
+      <div *ngIf="auditoriaService.obtenerBitacora().length === 0" class="empty-state-notifs">
+        <p>Aún no se han registrado eventos auditables en esta sesión.</p>
+      </div>
+
+      <div class="notif-table-wrapper" *ngIf="auditoriaService.obtenerBitacora().length > 0">
+        <table class="notif-table">
+          <thead>
+            <tr>
+              <th>ID Auditoría</th>
+              <th>Fecha/Hora (Exacta)</th>
+              <th>Usuario / Proceso</th>
+              <th>Operación</th>
+              <th>Módulo</th>
+              <th>Detalles</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let audit of auditoriaService.obtenerBitacora()">
+              <td><code>{{ audit.id }}</code></td>
+              <td><small>{{ audit.fechaHoraExacta }}</small></td>
+              <td>
+                <strong>{{ audit.usuarioId }}</strong>
+                <br>
+                <small class="role-pill">{{ audit.rolUsuario }}</small>
+              </td>
+              <td><span class="badge-audit-accion">{{ audit.tipoAccion }}</span></td>
+              <td>{{ audit.moduloAfectado }}</td>
+              <td>
+                <button type="button" class="btn-ver-diff" (click)="verDetalleAuditoria(audit)">
+                  Ver Cambios
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Detalle Formateado de Cambios Anteriores vs Nuevos -->
+      <div *ngIf="registroAuditoriaSeleccionado" class="diff-container">
+        <h4>Detalle de Trazabilidad: {{ registroAuditoriaSeleccionado.id }}</h4>
+        <div class="diff-grid">
+          
+          <div class="diff-box">
+            <span class="diff-tag diff-before">Valores Anteriores</span>
+            <ul class="diff-lista">
+              <li *ngFor="let item of obtenerPropiedadesAuditoria(registroAuditoriaSeleccionado.valoresAnteriores)">
+                <strong>{{ item.clave }}:</strong> <span>{{ item.valor }}</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="diff-box">
+            <span class="diff-tag diff-after">Valores Nuevos</span>
+            <ul class="diff-lista">
+              <li *ngFor="let item of obtenerPropiedadesAuditoria(registroAuditoriaSeleccionado.valoresNuevos)">
+                <strong>{{ item.clave }}:</strong> <span>{{ item.valor }}</span>
+              </li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="cerrarModalAuditoria()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
