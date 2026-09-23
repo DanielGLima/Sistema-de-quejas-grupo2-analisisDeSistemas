@@ -131,7 +131,7 @@ export class RecuperarPasswordComponent implements OnInit {
       },
       error: (err) => {
         // FA02: código o enlace expirado
-        this.mensajeError = err.error?.message ?? 'El código es incorrecto';
+        this.mensajeError = err.error?.message ?? 'El código es incorrecto  ';
       }
     });
   }

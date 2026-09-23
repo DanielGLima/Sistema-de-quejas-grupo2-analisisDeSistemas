@@ -28,6 +28,7 @@
           type="text"
           maxlength="100"
           formControlName="nombreCompleto"
+          (input)="soloTexto($event)"
         />
       </div>
 
@@ -37,8 +38,11 @@
           <label for="fechaNacimiento">fecha de nacimiento</label>
           <input
             id="fechaNacimiento"
-            type="date"
+            type="text"
+            maxlength="10"
+            placeholder="dd/mm/aaaa"
             formControlName="fechaNacimiento"
+            (input)="formatearFecha($event)"
           />
         </div>
 
@@ -71,20 +75,24 @@
           <input
             id="codigoArea"
             type="text"
+            inputmode="numeric"
             maxlength="4"
             formControlName="codigoArea"
+            (input)="soloNumeros($event, 'codigoArea')"
           />
         </div>
 
         <!-- teléfono -->
         <div class="form-group">
-          <label for="telefono">teléfono</label>
+          <label for="numero de telefono">teléfono</label>
           <input
             id="telefono"
             type="text"
+            inputmode="numeric"
             maxlength="8"
             placeholder="Ej: 55443322"
             formControlName="telefono"
+            (input)="soloNumeros($event, 'telefono')"
           />
         </div>
       </div>
@@ -98,6 +106,7 @@
           maxlength="150"
           formControlName="direccion"
         />
+        <small class="help-text">Llenar unicamente si cambiara contraseña</small>
       </div>
 
       <!-- FA01: cambio de contraseña, opcional -->
@@ -108,7 +117,6 @@
             id="passwordActual"
             type="password"
             maxlength="20"
-            placeholder="Solo si va a cambiar su contraseña"
             formControlName="passwordActual"
           />
         </div>
@@ -119,7 +127,7 @@
             id="passwordNueva"
             type="password"
             maxlength="20"
-            placeholder="Dejar vacío para no cambiarla"
+            placeholder=""
             formControlName="passwordNueva"
           />
         </div>
