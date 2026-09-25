@@ -12,6 +12,7 @@
 
     <form [formGroup]="loginForm" (ngSubmit)="iniciarSesion()">
       <!-- correo electrónico en minúsculas -->
+ <!-- correo electrónico en minúsculas -->
       <div class="form-group">
         <label for="correo">correo electrónico</label>
         <input 
@@ -19,7 +20,7 @@
           type="email" 
           maxlength="100" 
           placeholder="Ingrese su correo electrónico" 
-          formControlName="correo" 
+          formControlName="correoElectronico" 
         />
       </div>
 
