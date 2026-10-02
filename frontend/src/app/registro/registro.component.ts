@@ -134,7 +134,6 @@ export class RegistroComponent implements OnInit {
   habilitarPassword(): void {
     this.limpiarMensajes();
 
-    // Validar solo los campos de la primera sección
     const camposPaso1 = ['nombreCompleto', 'fechaNacimiento', 'nacionalidad', 'correoElectronico', 'codigoArea', 'telefono', 'direccion'];
     let formInvalido = false;
 
@@ -192,6 +191,7 @@ export class RegistroComponent implements OnInit {
     this.mostrarModalConfirmacion = true;
   }
 
+  // 3. Envío real a Spring Boot (RegistroRequest)
   confirmarRegistro(acepta: boolean): void {
     this.mostrarModalConfirmacion = false;
 

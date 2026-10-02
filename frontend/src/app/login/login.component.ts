@@ -27,14 +27,13 @@ export class LoginComponent implements OnInit {
   iniciarSesion(): void {
     this.mensajeError = '';
 
-    // FA04 - Campos obligatorios vacíos
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
       this.mensajeError = 'Debe ingresar los campos obligatorios';
       return;
     }
 
-    const { correoElectronico, password } = this.loginForm.value;
+const { correoElectronico, password } = this.loginForm.value;
 
     this.authService.login(correoElectronico, password).subscribe({
       next: () => {
