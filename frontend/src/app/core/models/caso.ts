@@ -22,6 +22,21 @@ export interface Caso {
   evaluacion?: EvaluacionCasoApi;
 }
 
+export interface RespuestaOficialApi {
+  idRespuesta: number;
+  titulo: string;
+  contenido: string;
+  accionesSeguimiento?: string;
+  estadoAprobacion: string;
+  fechaRespuesta: string;
+}
+
+export interface CasoDetalle {
+  caso: Caso;
+  historial: { estadoNuevo: { nombre: string }; fechaCambio: string }[];
+  respuestas: RespuestaOficialApi[];
+}
+
 export interface NuevoCasoRequest {
   idTipoCaso: number;
   idSucursal: number;

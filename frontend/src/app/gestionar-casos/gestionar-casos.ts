@@ -1,19 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 import { NavbarComponent } from '../shared/navbar/navbar';
-import { NotificacionesService } from '../services/notificaciones.service';
-import { RegistroAuditoriaNotificacion } from '../models/notificacion.model';
-import { AuditoriaService } from '../services/auditoria.service';
-import { RegistroAuditoria } from '../models/auditoria.model';
-
-export interface RespuestaOficial {
-  titulo: string;
-  cuerpo: string;
-  compensacion?: string;
-  fechaEmision: string;
-  usuarioEmisor: string;
-}
+import { AdminService } from '../services/admin.service';
+import { CatalogoService } from '../services/catalogo.service';
+import { BitacoraApi, CasoAdminApi, NotificacionApi, Personal, RespuestaApi } from '../core/models/admin';
+import { CategoriaCaso, Sucursal, TipoCaso } from '../core/models/catalogos';
 
 export interface HistorialReasignacion {
   fecha: string;
@@ -23,22 +16,35 @@ export interface HistorialReasignacion {
   usuarioEjecutor: string;
 }
 
+// Forma que usa esta pantalla (aplanada a partir de la respuesta de la API).
 export interface CasoAdmin {
+  idCaso: number;
   id: string;
   tipoCaso: string;
   categoria: string;
   sucursal: string;
   motivo: string;
   fechaCreacion: string;
+  fechaActualizacion: string;
   estado: string;
   detalle: string;
-  correoCliente?: string; // Requerido para envío de notificación al cliente (CU-14)
+  esAnonimo: boolean;
+  nombreCliente?: string;
+  correoCliente?: string;
+  idPersonalAsignado?: number;
   empleadoAsignado?: string;
-  notasInternas?: string;
   motivoReapertura?: string;
-  respuesta?: RespuestaOficial;
-  historialReasignaciones?: HistorialReasignacion[];
+  estadosPermitidos: string[];
+  respuestas: RespuestaApi[];
+  historialReasignaciones: HistorialReasignacion[];
 }
+
+interface Propiedad {
+  clave: string;
+  valor: string;
+}
+
+const PENDIENTE_APROBACION = 'Pendiente de aprobación';
 
 @Component({
   selector: 'app-gestionar-casos',
@@ -53,96 +59,68 @@ export class GestionarCasosComponent implements OnInit {
   respuestaForm!: FormGroup;
   reasignarForm!: FormGroup;
 
+  // Personal que inició sesión
+  personal: Personal | null = null;
+
   casoSeleccionado: CasoAdmin | null = null;
-  mostrarModalGestion: boolean = false;
-  mostrarModalResponder: boolean = false;
-  mostrarModalReasignar: boolean = false;
-  mostrarModalNotificaciones: boolean = false; // CU-14: Modal para auditar envíos
-  mostrarModalAuditoria: boolean = false;       // CU-15: Modal Bitácora
-  registroAuditoriaSeleccionado: RegistroAuditoria | null = null; // CU-15: Detalle JSON
+  mostrarModalGestion = false;
+  mostrarModalResponder = false;
+  mostrarModalReasignar = false;
+  mostrarModalNotificaciones = false;
+  mostrarModalAuditoria = false;
+  registroAuditoriaSeleccionado: BitacoraApi | null = null;
 
-  mensajeExito: string = '';
-  mensajeError: string = '';
-  mensajeExitoRespuesta: string = '';
-  mensajeErrorRespuesta: string = '';
-  mensajeExitoReasignar: string = '';
-  mensajeErrorReasignar: string = '';
+  mensajeExito = '';
+  mensajeError = '';
+  mensajeExitoRespuesta = '';
+  mensajeErrorRespuesta = '';
+  mensajeExitoReasignar = '';
+  mensajeErrorReasignar = '';
+  mensajeErrorBusqueda = '';
+  mensajeAccion = '';
+  errorAccion = '';
 
-  // CU-14: Toast reactivo de notificación automática generada
-  notificacionAlerta: RegistroAuditoriaNotificacion | null = null;
+  // CU-14: aviso flotante de la última notificación generada
+  notificacionAlerta: NotificacionApi | null = null;
+  notificaciones: NotificacionApi[] = [];
+  bitacora: BitacoraApi[] = [];
 
   // Catálogos
-  empleados: string[] = ['Carlos Morales', 'Ana Sofía Ruiz', 'Marcos Estrada', 'Lucía Méndez'];
-  empleadosReasignables: string[] = [];
-  estadosPosibles: string[] = ['Nuevo', 'En espera', 'En Proceso', 'Resuelto', 'Cerrado'];
+  empleados: Personal[] = [];
+  empleadosReasignables: Personal[] = [];
+  sucursalesDisponibles: Sucursal[] = [];
+  tiposDisponibles: TipoCaso[] = [];
+  categoriasDisponibles: CategoriaCaso[] = [];
+  estadosDisponibles: { idEstado: number; nombre: string }[] = [];
   estadosPermitidos: string[] = [];
 
-  // Filtros CU-12
-  filtroTexto: string = '';
-  filtroSucursal: string = 'Todas';
-  filtroTipo: string = 'Todos';
-  filtroEstado: string = 'Todos';
-  filtroResponsable: string = 'Todos';
-  filtroFechaDesde: string = '';
-  filtroFechaHasta: string = '';
-
-  sucursalesDisponibles: string[] = ['Todas', 'Zona 10', 'Miraflores', 'Cayalá'];
-  tiposDisponibles: string[] = ['Todos', 'Queja', 'Reclamo', 'Felicitación', 'Sugerencia', 'Denuncia'];
-  estadosFiltroDisponibles: string[] = ['Todos', 'Nuevo', 'En espera', 'En Proceso', 'Resuelto', 'Cerrado', 'Reapertura solicitada'];
-  responsablesFiltroDisponibles: string[] = ['Todos', 'Sin asignar', 'Carlos Morales', 'Ana Sofía Ruiz', 'Marcos Estrada', 'Lucía Méndez'];
-
-  casos: CasoAdmin[] = [
-    {
-      id: 'QUE-2026-001',
-      tipoCaso: 'Queja',
-      categoria: 'Servicio al cliente',
-      sucursal: 'Zona 10',
-      motivo: 'Demora en entrega de alimentos',
-      fechaCreacion: '2026-09-18',
-      estado: 'Nuevo',
-      detalle: 'El pedido tardó más de 45 minutos en servirse.',
-      correoCliente: 'cliente1@gmail.com',
-      empleadoAsignado: ''
-    },
-    {
-      id: 'REC-2026-002',
-      tipoCaso: 'Reclamo',
-      categoria: 'Facturación/Cobro',
-      sucursal: 'Miraflores',
-      motivo: 'Cobro no reconocido',
-      fechaCreacion: '2026-09-19',
-      estado: 'En Proceso',
-      detalle: 'Se visualiza doble cobro en tarjeta de crédito.',
-      correoCliente: 'cliente2@hotmail.com',
-      empleadoAsignado: 'Carlos Morales',
-      notasInternas: 'Solicitado comprobante al banco emisor.'
-    },
-    {
-      id: 'QUE-2026-003',
-      tipoCaso: 'Queja',
-      categoria: 'Comida',
-      sucursal: 'Cayalá',
-      motivo: 'Platillo frío y orden incorrecta',
-      fechaCreacion: '2026-09-15',
-      estado: 'Reapertura solicitada',
-      detalle: 'La queja se había cerrado pero el cliente no recibió su cupón de compensación.',
-      motivoReapertura: 'No se me hizo efectiva la cortesía prometida en la sucursal.',
-      correoCliente: 'cliente3@yahoo.com',
-      empleadoAsignado: 'Ana Sofía Ruiz'
-    }
-  ];
+  // Filtros CU-12 (se ejecutan con el botón "Buscar")
+  filtroTexto = '';
+  filtroIdentificador = '';
+  filtroCorreo = '';
+  filtroSucursal: number | null = null;
+  filtroTipo: number | null = null;
+  filtroCategoria: number | null = null;
+  filtroEstado: number | null = null;
+  filtroResponsable: number | null = null;
+  filtroFechaDesde = '';
+  filtroFechaHasta = '';
+  ordenarPor = 'fecha';
+  direccion: 'asc' | 'desc' = 'desc';
 
   casosFiltrados: CasoAdmin[] = [];
+  buscando = false;
 
   constructor(
     private fb: FormBuilder,
-    public notifService: NotificacionesService,
-    public auditoriaService: AuditoriaService
+    private router: Router,
+    private adminService: AdminService,
+    private catalogoService: CatalogoService
   ) {}
 
   ngOnInit(): void {
     this.gestionForm = this.fb.group({
-      empleadoAsignado: [''],
+      empleadoAsignado: [null as number | null],
       nuevoEstado: ['', Validators.required],
       notasInternas: ['', [Validators.maxLength(500)]]
     });
@@ -154,84 +132,157 @@ export class GestionarCasosComponent implements OnInit {
     });
 
     this.reasignarForm = this.fb.group({
-      nuevoResponsable: ['', Validators.required],
+      nuevoResponsable: [null as number | null, Validators.required],
       motivoReasignacion: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(300)]]
     });
 
-    this.aplicarFiltros();
+    this.adminService.sesion().subscribe({
+      next: (personal) => {
+        this.personal = personal;
+        this.cargarCatalogos();
+        this.buscar();
+        this.refrescarNotificaciones(false);
+        this.refrescarBitacora();
+      },
+      error: () => this.router.navigate(['/login'])
+    });
   }
 
-  // --- CU-12: Filtros ---
-  aplicarFiltros(): void {
-    const texto = this.filtroTexto.trim().toLowerCase();
+  // --- Rol ---
+  get rol(): string {
+    return this.personal?.rol.nombre ?? '';
+  }
 
-    this.casosFiltrados = this.casos.filter(caso => {
-      const coincideTexto = !texto ||
-        caso.id.toLowerCase().includes(texto) ||
-        caso.motivo.toLowerCase().includes(texto) ||
-        caso.detalle.toLowerCase().includes(texto);
+  esAdmin(): boolean {
+    return this.rol === 'Administrador General';
+  }
 
-      const coincideSucursal = this.filtroSucursal === 'Todas' || caso.sucursal === this.filtroSucursal;
-      const coincideTipo = this.filtroTipo === 'Todos' || caso.tipoCaso === this.filtroTipo;
-      const coincideEstado = this.filtroEstado === 'Todos' || caso.estado.toLowerCase() === this.filtroEstado.toLowerCase();
+  esAdminOGerente(): boolean {
+    return this.rol === 'Administrador General' || this.rol === 'Gerente';
+  }
 
-      let coincideResponsable = true;
-      if (this.filtroResponsable === 'Sin asignar') {
-        coincideResponsable = !caso.empleadoAsignado || caso.empleadoAsignado.trim() === '';
-      } else if (this.filtroResponsable !== 'Todos') {
-        coincideResponsable = caso.empleadoAsignado === this.filtroResponsable;
+  private cargarCatalogos(): void {
+    this.catalogoService.sucursales().subscribe(s => this.sucursalesDisponibles = s);
+    this.catalogoService.tiposCaso().subscribe(t => this.tiposDisponibles = t);
+    this.catalogoService.categoriasCaso().subscribe(c => this.categoriasDisponibles = c);
+    this.catalogoService.estados().subscribe(e => this.estadosDisponibles = e);
+    this.adminService.empleadosAsignables().subscribe(e => this.empleados = e);
+  }
+
+  // --- CU-12: búsqueda en el servidor ---
+  buscar(alTerminar?: () => void): void {
+    this.mensajeErrorBusqueda = '';
+    this.buscando = true;
+
+    this.adminService.buscarCasos({
+      texto: this.filtroTexto.trim(),
+      identificador: this.filtroIdentificador.trim(),
+      correoCliente: this.filtroCorreo.trim(),
+      idSucursal: this.filtroSucursal,
+      idTipoCaso: this.filtroTipo,
+      idCategoria: this.filtroCategoria,
+      idEstado: this.filtroEstado,
+      idResponsable: this.filtroResponsable,
+      fechaInicial: this.filtroFechaDesde,
+      fechaFinal: this.filtroFechaHasta,
+      ordenarPor: this.ordenarPor,
+      direccion: this.direccion
+    }).subscribe({
+      next: (casos) => {
+        this.casosFiltrados = casos.map(c => this.mapear(c));
+        this.buscando = false;
+        alTerminar?.();
+      },
+      error: (err) => {
+        // FA02: criterio inválido
+        this.mensajeErrorBusqueda = err.error?.message ?? 'No se pudo realizar la búsqueda';
+        this.casosFiltrados = [];
+        this.buscando = false;
       }
-
-      const coincideDesde = !this.filtroFechaDesde || caso.fechaCreacion >= this.filtroFechaDesde;
-      const coincideHasta = !this.filtroFechaHasta || caso.fechaCreacion <= this.filtroFechaHasta;
-
-      return coincideTexto && coincideSucursal && coincideTipo && coincideEstado && coincideResponsable && coincideDesde && coincideHasta;
     });
   }
 
   limpiarFiltros(): void {
     this.filtroTexto = '';
-    this.filtroSucursal = 'Todas';
-    this.filtroTipo = 'Todos';
-    this.filtroEstado = 'Todos';
-    this.filtroResponsable = 'Todos';
+    this.filtroIdentificador = '';
+    this.filtroCorreo = '';
+    this.filtroSucursal = null;
+    this.filtroTipo = null;
+    this.filtroCategoria = null;
+    this.filtroEstado = null;
+    this.filtroResponsable = null;
     this.filtroFechaDesde = '';
     this.filtroFechaHasta = '';
-    this.aplicarFiltros();
+    this.ordenarPor = 'fecha';
+    this.direccion = 'desc';
+    this.buscar();
   }
 
-  // --- CU-10: Gestión de Estados + CU-14 Notificación + CU-15 Auditoría ---
-  calcularEstadosPermitidos(caso: CasoAdmin): string[] {
-    if (caso.estado === 'Reapertura solicitada') {
-      return ['En Proceso', 'Cerrado'];
-    }
-
-    switch (caso.estado) {
-      case 'Nuevo':
-        return ['En espera', 'En Proceso', 'Cerrado'];
-      case 'En espera':
-        return ['En Proceso', 'Cerrado'];
-      case 'En Proceso':
-        return ['En espera', 'Resuelto', 'Cerrado'];
-      case 'Resuelto':
-        return ['Cerrado', 'En Proceso'];
-      case 'Cerrado':
-        return ['Reapertura solicitada'];
-      default:
-        return this.estadosPosibles;
-    }
+  private mapear(c: CasoAdminApi): CasoAdmin {
+    return {
+      idCaso: c.idCaso,
+      id: c.identificadorVisible,
+      tipoCaso: c.tipoCaso,
+      categoria: c.categoria ?? 'No aplica',
+      sucursal: c.sucursal,
+      motivo: c.categoria ?? c.tipoCaso,
+      fechaCreacion: c.fechaCreacion,
+      fechaActualizacion: c.fechaActualizacion,
+      estado: c.estado,
+      detalle: c.descripcion,
+      esAnonimo: c.esAnonimo,
+      nombreCliente: c.nombreCliente,
+      correoCliente: c.correoCliente,
+      idPersonalAsignado: c.idPersonalAsignado,
+      empleadoAsignado: c.personalAsignado,
+      motivoReapertura: c.motivoReapertura,
+      estadosPermitidos: c.estadosPermitidos,
+      respuestas: c.respuestas ?? [],
+      historialReasignaciones: (c.reasignaciones ?? []).map(r => ({
+        fecha: r.fechaReasignacion,
+        responsableAnterior: r.personalAnterior?.nombreCompleto ?? 'Sin asignar',
+        responsableNuevo: r.personalNuevo.nombreCompleto,
+        motivo: r.motivo,
+        usuarioEjecutor: r.personalEjecutor.nombreCompleto
+      }))
+    };
   }
 
+  // Reemplaza el caso en la lista y en la selección con los datos más recientes del servidor.
+  private aplicarActualizacion(api: CasoAdminApi): CasoAdmin {
+    const actualizado = this.mapear(api);
+    const idx = this.casosFiltrados.findIndex(c => c.idCaso === actualizado.idCaso);
+    if (idx !== -1) {
+      this.casosFiltrados[idx] = actualizado;
+    }
+    this.casoSeleccionado = actualizado;
+    return actualizado;
+  }
+
+  // FA03: si otra persona modificó el caso, se recarga la lista y la selección queda al día.
+  private recargarSiConflicto(err: any): void {
+    if (err.status !== 409) return;
+    const idSeleccionado = this.casoSeleccionado?.idCaso;
+    this.buscar(() => {
+      const fresco = this.casosFiltrados.find(c => c.idCaso === idSeleccionado);
+      if (fresco) {
+        this.casoSeleccionado = fresco;
+        this.estadosPermitidos = [fresco.estado, ...fresco.estadosPermitidos];
+      }
+    });
+  }
+
+  // --- CU-10: Gestión de Estados ---
   abrirModalGestion(caso: CasoAdmin): void {
     this.casoSeleccionado = caso;
     this.mensajeExito = '';
     this.mensajeError = '';
-    this.estadosPermitidos = this.calcularEstadosPermitidos(caso);
+    this.estadosPermitidos = [caso.estado, ...caso.estadosPermitidos];
 
     this.gestionForm.reset({
-      empleadoAsignado: caso.empleadoAsignado || '',
+      empleadoAsignado: caso.idPersonalAsignado ?? null,
       nuevoEstado: caso.estado === 'Reapertura solicitada' ? '' : caso.estado,
-      notasInternas: caso.notasInternas || ''
+      notasInternas: ''
     });
 
     this.mostrarModalGestion = true;
@@ -245,6 +296,7 @@ export class GestionarCasosComponent implements OnInit {
   }
 
   guardarGestion(): void {
+    this.mensajeError = '';
     if (!this.casoSeleccionado || this.gestionForm.invalid) {
       this.mensajeError = 'Debe seleccionar un estado válido.';
       return;
@@ -252,51 +304,56 @@ export class GestionarCasosComponent implements OnInit {
 
     const { empleadoAsignado, nuevoEstado, notasInternas } = this.gestionForm.value;
 
-    if (!this.estadosPermitidos.includes(nuevoEstado)) {
-      this.mensajeError = 'El estado no es permitido según el flujo del caso.';
-      return;
-    }
-
-    const estadoPrevio = this.casoSeleccionado.estado;
-    this.casoSeleccionado.estado = nuevoEstado;
-    this.casoSeleccionado.empleadoAsignado = empleadoAsignado || undefined;
-    this.casoSeleccionado.notasInternas = notasInternas?.trim() || undefined;
-
-    const idx = this.casos.findIndex(c => c.id === this.casoSeleccionado?.id);
-    if (idx !== -1) {
-      this.casos[idx] = { ...this.casoSeleccionado };
-    }
-
-    // DISPARO AUTOMÁTICO CU-14: Notificar al cliente si cambió el estado
-    if (estadoPrevio !== nuevoEstado) {
-      this.notificacionAlerta = this.notifService.enviarNotificacionAutomatica({
-        codigoCaso: this.casoSeleccionado.id,
-        evento: 'CAMBIO_ESTADO',
-        emailDestino: this.casoSeleccionado.correoCliente,
-        destinatarioRol: 'Cliente',
-        detalles: { estadoNuevo: nuevoEstado }
-      });
-      setTimeout(() => this.notificacionAlerta = null, 4000);
-    }
-
-    // DISPARO AUTOMÁTICO CU-15: Registrar en Bitácora de Auditoría
-    this.auditoriaService.registrarEvento({
-      usuarioId: 'ADM-01 (Heydi Herrera)',
-      rolUsuario: 'Administrador General',
-      tipoAccion: 'CAMBIO_ESTADO',
-      moduloAfectado: 'GESTION_CASOS',
-      valoresAnteriores: { caso: this.casoSeleccionado.id, estado: estadoPrevio },
-      valoresNuevos: { caso: this.casoSeleccionado.id, estado: nuevoEstado, empleado: empleadoAsignado, notas: notasInternas }
+    this.adminService.gestionar(this.casoSeleccionado.idCaso, {
+      idPersonalAsignado: empleadoAsignado,
+      nuevoEstado,
+      notas: notasInternas?.trim() || undefined,
+      fechaActualizacion: this.casoSeleccionado.fechaActualizacion
+    }).subscribe({
+      next: (api) => {
+        this.aplicarActualizacion(api);
+        this.mensajeExito = 'Gestión guardada exitosamente.';
+        this.alTerminarAccion();
+        setTimeout(() => this.cerrarModal(), 1400);
+      },
+      error: (err) => {
+        // FA01: estado no permitido (con la lista de estados válidos) / FA02: sin permisos / FA03: caso modificado
+        this.mensajeError = err.error?.message ?? 'No se pudo guardar la gestión';
+        this.recargarSiConflicto(err);
+      }
     });
-
-    this.aplicarFiltros();
-    this.mensajeExito = 'Gestión guardada exitosamente.';
-    setTimeout(() => this.cerrarModal(), 1400);
   }
 
-  // --- CU-11: Responder Caso + CU-14 Notificación + CU-15 Auditoría ---
+  // --- CU-11: Responder Caso ---
+  tieneRespuestaPendiente(caso: CasoAdmin): boolean {
+    return caso.respuestas.some(r => r.estadoAprobacion === PENDIENTE_APROBACION);
+  }
+
   puedeResponder(caso: CasoAdmin): boolean {
-    return caso.estado?.toLowerCase() === 'en proceso' && !!caso.empleadoAsignado && caso.empleadoAsignado.trim() !== '';
+    if (caso.estado.toLowerCase() !== 'en proceso' || !caso.idPersonalAsignado || this.tieneRespuestaPendiente(caso)) {
+      return false;
+    }
+    return this.rol !== 'Operador' || caso.idPersonalAsignado === this.personal?.idPersonal;
+  }
+
+  // FA01: el Gerente confirma la respuesta de un Operador.
+  puedeAprobar(caso: CasoAdmin): boolean {
+    return this.esAdminOGerente() && this.tieneRespuestaPendiente(caso) && caso.estado.toLowerCase() === 'en proceso';
+  }
+
+  aprobarRespuesta(caso: CasoAdmin): void {
+    const pendiente = caso.respuestas.find(r => r.estadoAprobacion === PENDIENTE_APROBACION);
+    if (!pendiente) return;
+    this.limpiarAviso();
+
+    this.adminService.aprobarRespuesta(pendiente.idRespuesta).subscribe({
+      next: (api) => {
+        this.aplicarActualizacion(api);
+        this.mensajeAccion = `Respuesta aprobada. El caso ${caso.id} quedó en estado Resuelto.`;
+        this.alTerminarAccion();
+      },
+      error: (err) => this.errorAccion = err.error?.message ?? 'No se pudo aprobar la respuesta'
+    });
   }
 
   abrirModalResponder(caso: CasoAdmin): void {
@@ -315,72 +372,49 @@ export class GestionarCasosComponent implements OnInit {
   }
 
   enviarRespuesta(): void {
-    if (!this.casoSeleccionado || this.respuestaForm.invalid) {
-      this.mensajeErrorRespuesta = 'Complete los campos obligatorios (cuerpo mín. 20 caracteres).';
+    this.mensajeErrorRespuesta = '';
+    if (!this.casoSeleccionado) return;
+    if (this.respuestaForm.invalid) {
+      this.respuestaForm.markAllAsTouched();
+      this.mensajeErrorRespuesta = 'Debe completar la información requerida: título (máx. 100) y cuerpo de la respuesta (entre 20 y 1000 caracteres).';
       return;
     }
 
     const { titulo, cuerpo, compensacion } = this.respuestaForm.value;
 
-    this.casoSeleccionado.respuesta = {
+    this.adminService.responder(this.casoSeleccionado.idCaso, {
       titulo: titulo.trim(),
       cuerpo: cuerpo.trim(),
-      compensacion: compensacion?.trim() || undefined,
-      fechaEmision: new Date().toISOString(),
-      usuarioEmisor: this.casoSeleccionado.empleadoAsignado || 'Administrador'
-    };
-
-    this.casoSeleccionado.estado = 'Resuelto';
-
-    const idx = this.casos.findIndex(c => c.id === this.casoSeleccionado?.id);
-    if (idx !== -1) {
-      this.casos[idx] = { ...this.casoSeleccionado };
-    }
-
-    // DISPARO AUTOMÁTICO CU-14: Notificar al cliente la respuesta oficial
-    this.notificacionAlerta = this.notifService.enviarNotificacionAutomatica({
-      codigoCaso: this.casoSeleccionado.id,
-      evento: 'RESPUESTA_OFICIAL',
-      emailDestino: this.casoSeleccionado.correoCliente,
-      destinatarioRol: 'Cliente',
-      detalles: { tituloRespuesta: titulo }
+      accionesSeguimiento: compensacion?.trim() || undefined
+    }).subscribe({
+      next: (api) => {
+        const actualizado = this.aplicarActualizacion(api);
+        this.mensajeExitoRespuesta = actualizado.estado === 'Resuelto'
+          ? 'Respuesta oficial enviada con éxito. Estado actualizado a Resuelto.'
+          : 'Respuesta registrada. Queda pendiente de aprobación del Gerente.';
+        this.alTerminarAccion();
+        setTimeout(() => this.cerrarModalResponder(), 1600);
+      },
+      error: (err) => {
+        // FA02: información insuficiente / FA03: caso no disponible para respuesta
+        this.mensajeErrorRespuesta = err.error?.message ?? 'No se pudo enviar la respuesta';
+        this.recargarSiConflicto(err);
+      }
     });
-    setTimeout(() => this.notificacionAlerta = null, 4000);
-
-    // DISPARO AUTOMÁTICO CU-15: Registrar en Bitácora de Auditoría
-    this.auditoriaService.registrarEvento({
-      usuarioId: this.casoSeleccionado.empleadoAsignado || 'ADM-01',
-      rolUsuario: 'Gerente / Encargado',
-      tipoAccion: 'EMISION_RESPUESTA_OFICIAL',
-      moduloAfectado: 'RESPUESTA_CASOS',
-      valoresAnteriores: { caso: this.casoSeleccionado.id, estado: 'En Proceso' },
-      valoresNuevos: { caso: this.casoSeleccionado.id, estado: 'Resuelto', titulo, compensacion }
-    });
-
-    this.aplicarFiltros();
-    this.mensajeExitoRespuesta = 'Respuesta oficial enviada con éxito. Estado actualizado a Resuelto.';
-    setTimeout(() => this.cerrarModalResponder(), 1400);
   }
 
-  // --- CU-13: Reasignar Caso + CU-14 Notificación + CU-15 Auditoría ---
+  // --- CU-10: Reasignar Caso ---
   puedeReasignar(caso: CasoAdmin): boolean {
-    const tieneAsignado = !!caso.empleadoAsignado && caso.empleadoAsignado.trim() !== '';
-    const estadoValido = !['cerrado', 'cancelado', 'resuelto'].includes(caso.estado?.toLowerCase());
-    return tieneAsignado && estadoValido;
+    const estadoValido = !['cerrado', 'cancelado por el usuario', 'resuelto'].includes(caso.estado.toLowerCase());
+    return this.esAdminOGerente() && !!caso.idPersonalAsignado && estadoValido;
   }
 
   abrirModalReasignar(caso: CasoAdmin): void {
     this.casoSeleccionado = caso;
     this.mensajeExitoReasignar = '';
     this.mensajeErrorReasignar = '';
-
-    this.empleadosReasignables = this.empleados.filter(e => e !== caso.empleadoAsignado);
-
-    this.reasignarForm.reset({
-      nuevoResponsable: '',
-      motivoReasignacion: ''
-    });
-
+    this.empleadosReasignables = this.empleados.filter(e => e.idPersonal !== caso.idPersonalAsignado);
+    this.reasignarForm.reset({ nuevoResponsable: null, motivoReasignacion: '' });
     this.mostrarModalReasignar = true;
   }
 
@@ -394,75 +428,78 @@ export class GestionarCasosComponent implements OnInit {
   guardarReasignacion(): void {
     this.mensajeErrorReasignar = '';
     this.mensajeExitoReasignar = '';
-
     if (!this.casoSeleccionado) return;
 
-    if (this.reasignarForm.invalid) {
-      const resp = this.reasignarForm.get('nuevoResponsable');
-      const mot = this.reasignarForm.get('motivoReasignacion');
-
-      if (!resp?.value) {
-        this.mensajeErrorReasignar = 'Debe seleccionar un nuevo empleado responsable.';
-        return;
-      }
-      if (!mot?.value || mot.value.trim().length < 10) {
-        this.mensajeErrorReasignar = 'Debe ingresar el motivo de la reasignación (mínimo 10 caracteres).';
-        return;
-      }
+    const resp = this.reasignarForm.get('nuevoResponsable')?.value;
+    const motivo = (this.reasignarForm.get('motivoReasignacion')?.value ?? '').trim();
+    if (!resp) {
+      this.mensajeErrorReasignar = 'Debe seleccionar un nuevo empleado responsable.';
+      return;
+    }
+    if (motivo.length < 10) {
+      this.mensajeErrorReasignar = 'Debe ingresar el motivo de la reasignación (mínimo 10 caracteres).';
       return;
     }
 
-    const { nuevoResponsable, motivoReasignacion } = this.reasignarForm.value;
-    const anteriorResponsable = this.casoSeleccionado.empleadoAsignado || 'Sin asignar';
-
-    if (!this.casoSeleccionado.historialReasignaciones) {
-      this.casoSeleccionado.historialReasignaciones = [];
-    }
-
-    this.casoSeleccionado.historialReasignaciones.push({
-      fecha: new Date().toISOString(),
-      responsableAnterior: anteriorResponsable,
-      responsableNuevo: nuevoResponsable,
-      motivo: motivoReasignacion.trim(),
-      usuarioEjecutor: 'Gerente General'
+    this.adminService.reasignar(this.casoSeleccionado.idCaso, {
+      idPersonalNuevo: Number(resp),
+      motivo,
+      fechaActualizacion: this.casoSeleccionado.fechaActualizacion
+    }).subscribe({
+      next: (api) => {
+        const actualizado = this.aplicarActualizacion(api);
+        this.mensajeExitoReasignar = `Caso reasignado a ${actualizado.empleadoAsignado} exitosamente.`;
+        this.alTerminarAccion();
+        setTimeout(() => this.cerrarModalReasignar(), 1400);
+      },
+      error: (err) => {
+        this.mensajeErrorReasignar = err.error?.message ?? 'No se pudo reasignar el caso';
+        this.recargarSiConflicto(err);
+      }
     });
-
-    this.casoSeleccionado.empleadoAsignado = nuevoResponsable;
-
-    const idx = this.casos.findIndex(c => c.id === this.casoSeleccionado?.id);
-    if (idx !== -1) {
-      this.casos[idx] = { ...this.casoSeleccionado };
-    }
-
-    // DISPARO AUTOMÁTICO CU-14: Notificar internamente al nuevo empleado asignado
-    this.notificacionAlerta = this.notifService.enviarNotificacionAutomatica({
-      codigoCaso: this.casoSeleccionado.id,
-      evento: 'REASIGNACION',
-      emailDestino: `${nuevoResponsable.toLowerCase().replace(' ', '.')}@lasdelicias.com.gt`,
-      destinatarioRol: 'Personal Administrativo',
-      detalles: { responsableNuevo: nuevoResponsable }
-    });
-    setTimeout(() => this.notificacionAlerta = null, 4000);
-
-    // DISPARO AUTOMÁTICO CU-15: Registrar en Bitácora de Auditoría
-    this.auditoriaService.registrarEvento({
-      usuarioId: 'ADM-01 (Heydi Herrera)',
-      rolUsuario: 'Administrador General',
-      tipoAccion: 'REASIGNACION_RESPONSABLE',
-      moduloAfectado: 'ASIGNACION_CASOS',
-      valoresAnteriores: { caso: this.casoSeleccionado.id, responsable: anteriorResponsable },
-      valoresNuevos: { caso: this.casoSeleccionado.id, responsable: nuevoResponsable, motivo: motivoReasignacion }
-    });
-
-    this.aplicarFiltros();
-    this.mensajeExitoReasignar = `Caso reasignado a ${nuevoResponsable} exitosamente.`;
-    setTimeout(() => {
-      this.cerrarModalReasignar();
-    }, 1400);
   }
 
-  // --- CU-14: Modal Notificaciones ---
+  // --- CU-14 / CU-15 ---
+  private alTerminarAccion(): void {
+    this.refrescarNotificaciones(true);
+    this.refrescarBitacora();
+  }
+
+  private refrescarNotificaciones(mostrarAviso: boolean): void {
+    if (!this.esAdminOGerenteRol()) return;
+    this.adminService.notificaciones().subscribe({
+      next: (lista) => {
+        this.notificaciones = lista;
+        const ultima = lista[0];
+        if (mostrarAviso && ultima && Date.now() - new Date(ultima.fechaEnvio).getTime() < 15000) {
+          this.notificacionAlerta = ultima;
+          setTimeout(() => this.notificacionAlerta = null, 4000);
+        }
+      },
+      error: () => this.notificaciones = []
+    });
+  }
+
+  private refrescarBitacora(): void {
+    if (!this.esAdminRol()) return;
+    this.adminService.bitacora().subscribe({
+      next: (lista) => this.bitacora = lista,
+      error: () => this.bitacora = []
+    });
+  }
+
+  // El rol puede no estar cargado aún al primer refresco; se consulta el guardado como respaldo.
+  private esAdminRol(): boolean {
+    return (this.rol || this.adminService.rolGuardado()) === 'Administrador General';
+  }
+
+  private esAdminOGerenteRol(): boolean {
+    const rol = this.rol || this.adminService.rolGuardado();
+    return rol === 'Administrador General' || rol === 'Gerente';
+  }
+
   abrirModalNotificaciones(): void {
+    this.refrescarNotificaciones(false);
     this.mostrarModalNotificaciones = true;
   }
 
@@ -470,8 +507,8 @@ export class GestionarCasosComponent implements OnInit {
     this.mostrarModalNotificaciones = false;
   }
 
-  // --- CU-15: Modal Bitácora de Auditoría ---
   abrirModalAuditoria(): void {
+    this.refrescarBitacora();
     this.mostrarModalAuditoria = true;
   }
 
@@ -480,8 +517,13 @@ export class GestionarCasosComponent implements OnInit {
     this.registroAuditoriaSeleccionado = null;
   }
 
-  verDetalleAuditoria(reg: RegistroAuditoria): void {
+  verDetalleAuditoria(reg: BitacoraApi): void {
     this.registroAuditoriaSeleccionado = reg;
+  }
+
+  limpiarAviso(): void {
+    this.mensajeAccion = '';
+    this.errorAccion = '';
   }
 
   obtenerClaseEstado(estado: string): string {
@@ -496,8 +538,21 @@ export class GestionarCasosComponent implements OnInit {
     }
   }
 
-  // CU-15: Parsea el JSON/objeto para mostrar pares Clave - Valor legibles en la vista
-  obtenerPropiedadesAuditoria(data: any): { clave: string; valor: string }[] {
+  // CU-15: el detalle viene como JSON; si trae {anterior, nuevo} se muestran en dos columnas.
+  detalleAuditoria(reg: BitacoraApi): { anterior: Propiedad[] | null; nuevo: Propiedad[] } {
+    let obj: any = null;
+    try {
+      obj = reg.detalle ? JSON.parse(reg.detalle) : null;
+    } catch {
+      obj = null;
+    }
+    if (obj && typeof obj === 'object' && obj.anterior && obj.nuevo) {
+      return { anterior: this.obtenerPropiedadesAuditoria(obj.anterior), nuevo: this.obtenerPropiedadesAuditoria(obj.nuevo) };
+    }
+    return { anterior: null, nuevo: this.obtenerPropiedadesAuditoria(obj ?? reg.detalle) };
+  }
+
+  obtenerPropiedadesAuditoria(data: any): Propiedad[] {
     if (!data) return [];
     try {
       const obj = typeof data === 'string' ? JSON.parse(data) : data;

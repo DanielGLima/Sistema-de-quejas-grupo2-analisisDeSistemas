@@ -1,0 +1,193 @@
+<app-navbar></app-navbar>
+
+<div class="page-wrapper">
+  <div class="admin-card">
+    <div class="header">
+      <h2>Administración interna</h2>
+      <p class="subtitle">Restaurante Las Delicias — CU-13 Administrar Usuarios y Catálogos Internos</p>
+    </div>
+
+    <div class="tabs">
+      <button type="button" [class.active]="pestana === 'personal'" (click)="cambiarPestana('personal')">Usuarios internos</button>
+      <button type="button" [class.active]="pestana === 'sucursales'" (click)="cambiarPestana('sucursales')">Sucursales</button>
+      <button type="button" [class.active]="pestana === 'tipos'" (click)="cambiarPestana('tipos')">Tipos de caso</button>
+      <button type="button" [class.active]="pestana === 'categorias'" (click)="cambiarPestana('categorias')">Categorías</button>
+      <button type="button" [class.active]="pestana === 'estados'" (click)="cambiarPestana('estados')">Estados</button>
+    </div>
+
+    <div *ngIf="mensajeError" class="alert alert-danger">{{ mensajeError }}</div>
+    <div *ngIf="mensajeExito" class="alert alert-success">{{ mensajeExito }}</div>
+
+    <!-- ===================== Usuarios internos ===================== -->
+    <section *ngIf="pestana === 'personal'">
+      <form class="form-grid" (ngSubmit)="guardarPersonal()">
+        <h3>{{ idEdicionPersonal === null ? 'Nuevo usuario interno' : 'Editar usuario interno' }}</h3>
+
+        <label>Nombre completo (solo letras, máx. 100)
+          <input name="nombre" [(ngModel)]="formPersonal.nombreCompleto" maxlength="100" required />
+        </label>
+        <label>Correo electrónico corporativo (máx. 100)
+          <input name="correo" type="email" [(ngModel)]="formPersonal.correo" maxlength="100" required />
+        </label>
+        <label>Rol asignado
+          <select name="rol" [(ngModel)]="formPersonal.idRol" required>
+            <option [ngValue]="null" disabled>Seleccione un rol</option>
+            <option *ngFor="let r of roles" [ngValue]="r.idRol">{{ r.nombre }}</option>
+          </select>
+        </label>
+        <label>Sucursal asignada
+          <select name="sucursal" [(ngModel)]="formPersonal.idSucursal" required>
+            <option [ngValue]="null" disabled>Seleccione una sucursal</option>
+            <option *ngFor="let s of sucursales" [ngValue]="s.idSucursal">{{ s.nombreSucursal }}</option>
+          </select>
+        </label>
+        <label>Estado de la cuenta
+          <select name="activo" [(ngModel)]="formPersonal.activo">
+            <option [ngValue]="true">Activa</option>
+            <option [ngValue]="false">Inactiva</option>
+          </select>
+        </label>
+        <label>Contraseña temporal (alfanumérica, 6 a 20){{ idEdicionPersonal !== null ? ' — dejar vacío para no cambiarla' : '' }}
+          <input name="password" type="password" [(ngModel)]="formPersonal.passwordTemporal" maxlength="20" [required]="idEdicionPersonal === null" />
+        </label>
+
+        <div class="form-actions">
+          <button type="button" class="btn secondary" *ngIf="idEdicionPersonal !== null" (click)="cancelarEdicion()">Cancelar</button>
+          <button type="submit" class="btn primary">Guardar</button>
+        </div>
+      </form>
+
+      <table class="tabla">
+        <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Sucursal</th><th>Estado</th><th></th></tr></thead>
+        <tbody>
+          <tr *ngFor="let p of personal">
+            <td>{{ p.nombreCompleto }}</td>
+            <td>{{ p.correo }}</td>
+            <td>{{ p.rol.nombre }}</td>
+            <td>{{ p.sucursal?.nombreSucursal || '—' }}</td>
+            <td><span class="chip" [class.off]="!p.activo">{{ p.activo ? 'Activa' : 'Inactiva' }}</span></td>
+            <td class="acciones">
+              <button type="button" class="btn small" (click)="editarPersonal(p)">Editar</button>
+              <button type="button" class="btn small warn" (click)="alternarPersonal(p)">{{ p.activo ? 'Desactivar' : 'Activar' }}</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ===================== Sucursales ===================== -->
+    <section *ngIf="pestana === 'sucursales'">
+      <form class="form-grid" (ngSubmit)="guardarSucursal()">
+        <h3>{{ idEdicionCatalogo === null ? 'Nueva sucursal' : 'Editar sucursal' }}</h3>
+        <label>Nombre de la sucursal (máx. 30)
+          <input name="suc-nombre" [(ngModel)]="formSucursal.nombre" maxlength="30" required />
+        </label>
+        <label>Dirección de la sucursal (máx. 150)
+          <input name="suc-dir" [(ngModel)]="formSucursal.direccion" maxlength="150" required />
+        </label>
+        <label>Teléfono (opcional)
+          <input name="suc-tel" [(ngModel)]="formSucursal.telefono" maxlength="20" />
+        </label>
+        <div class="form-actions">
+          <button type="button" class="btn secondary" *ngIf="idEdicionCatalogo !== null" (click)="cancelarEdicion()">Cancelar</button>
+          <button type="submit" class="btn primary">Guardar</button>
+        </div>
+      </form>
+
+      <table class="tabla">
+        <thead><tr><th>Nombre</th><th>Dirección</th><th>Teléfono</th><th>Estado</th><th></th></tr></thead>
+        <tbody>
+          <tr *ngFor="let s of sucursales">
+            <td>{{ s.nombreSucursal }}</td>
+            <td>{{ s.direccionSucursal }}</td>
+            <td>{{ s.telefonoSucursal || '—' }}</td>
+            <td><span class="chip" [class.off]="!s.activo">{{ s.activo ? 'Activa' : 'Inactiva' }}</span></td>
+            <td class="acciones">
+              <button type="button" class="btn small" (click)="editarSucursal(s)">Editar</button>
+              <button type="button" class="btn small warn" (click)="alternarSucursal(s)">{{ s.activo ? 'Desactivar' : 'Activar' }}</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ===================== Tipos de caso ===================== -->
+    <section *ngIf="pestana === 'tipos'">
+      <form class="form-grid" (ngSubmit)="guardarTipo()">
+        <h3>{{ idEdicionCatalogo === null ? 'Nuevo tipo de caso' : 'Editar tipo de caso' }}</h3>
+        <label>Nombre del tipo de caso (máx. 20)
+          <input name="tipo-nombre" [(ngModel)]="formTipo.nombre" maxlength="20" required />
+        </label>
+        <label>Prefijo (3 letras)
+          <input name="tipo-codigo" [(ngModel)]="formTipo.codigo" maxlength="3" required />
+        </label>
+        <div class="form-actions">
+          <button type="button" class="btn secondary" *ngIf="idEdicionCatalogo !== null" (click)="cancelarEdicion()">Cancelar</button>
+          <button type="submit" class="btn primary">Guardar</button>
+        </div>
+      </form>
+
+      <table class="tabla">
+        <thead><tr><th>Prefijo</th><th>Nombre</th><th>Estado</th><th></th></tr></thead>
+        <tbody>
+          <tr *ngFor="let t of tipos">
+            <td><code>{{ t.codigo }}</code></td>
+            <td>{{ t.nombre }}</td>
+            <td><span class="chip" [class.off]="!t.activo">{{ t.activo ? 'Activo' : 'Inactivo' }}</span></td>
+            <td class="acciones">
+              <button type="button" class="btn small" (click)="editarTipo(t)">Editar</button>
+              <button type="button" class="btn small warn" (click)="alternarTipo(t)">{{ t.activo ? 'Desactivar' : 'Activar' }}</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ===================== Categorías ===================== -->
+    <section *ngIf="pestana === 'categorias'">
+      <form class="form-grid" (ngSubmit)="guardarCategoria()">
+        <h3>{{ idEdicionCatalogo === null ? 'Nueva categoría' : 'Editar categoría' }}</h3>
+        <label>Nombre de la categoría (solo letras, máx. 30)
+          <input name="cat-nombre" [(ngModel)]="formCategoria.nombre" maxlength="30" required />
+        </label>
+        <label>Prefijo (3 letras)
+          <input name="cat-codigo" [(ngModel)]="formCategoria.codigo" maxlength="3" required />
+        </label>
+        <div class="form-actions">
+          <button type="button" class="btn secondary" *ngIf="idEdicionCatalogo !== null" (click)="cancelarEdicion()">Cancelar</button>
+          <button type="submit" class="btn primary">Guardar</button>
+        </div>
+      </form>
+
+      <table class="tabla">
+        <thead><tr><th>Prefijo</th><th>Nombre</th><th>Estado</th><th></th></tr></thead>
+        <tbody>
+          <tr *ngFor="let c of categorias">
+            <td><code>{{ c.codigo }}</code></td>
+            <td>{{ c.nombre }}</td>
+            <td><span class="chip" [class.off]="!c.activo">{{ c.activo ? 'Activa' : 'Inactiva' }}</span></td>
+            <td class="acciones">
+              <button type="button" class="btn small" (click)="editarCategoria(c)">Editar</button>
+              <button type="button" class="btn small warn" (click)="alternarCategoria(c)">{{ c.activo ? 'Desactivar' : 'Activar' }}</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ===================== Estados (catálogo maestro) ===================== -->
+    <section *ngIf="pestana === 'estados'">
+      <p class="nota">Catálogo maestro del flujo de atención. Los estados forman parte del proceso (CU-10) y no se pueden renombrar ni desactivar.</p>
+      <table class="tabla">
+        <thead><tr><th>Orden</th><th>Estado</th><th>Situación</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let e of estados">
+            <td>{{ e.orden }}</td>
+            <td>{{ e.nombre }}</td>
+            <td><span class="chip" [class.off]="!e.activo">{{ e.activo ? 'Activo' : 'Inactivo' }}</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+</div>

@@ -9,7 +9,7 @@
       <div class="toast-content">
         <span class="toast-title">Notificación Automática Enviada (CU-14)</span>
         <p class="toast-text"><strong>{{ notificacionAlerta.asunto }}</strong></p>
-        <small class="toast-meta">Destino: {{ notificacionAlerta.destinatarioEmail }} | {{ notificacionAlerta.estadoEnvio }}</small>
+        <small class="toast-meta">Destino: {{ notificacionAlerta.correoDestino }} | {{ notificacionAlerta.estadoEnvio }}</small>
       </div>
     </div>
 
@@ -20,77 +20,120 @@
         <p class="subtitle">Restaurante Las Delicias — CU-10 / CU-11 / CU-12 / CU-13 / CU-14 / CU-15</p>
       </div>
       <div class="header-actions">
-        <button type="button" class="btn-notificaciones-log" (click)="abrirModalNotificaciones()" title="Ver historial de notificaciones generadas">
-          📬 Notificaciones ({{ notifService.obtenerHistorial().length }})
+        <button *ngIf="esAdminOGerente()" type="button" class="btn-notificaciones-log" (click)="abrirModalNotificaciones()" title="Ver historial de notificaciones generadas">
+          📬 Notificaciones ({{ notificaciones.length }})
         </button>
-        <button type="button" class="btn-auditoria-log" (click)="abrirModalAuditoria()" title="Consultar bitácora inalterable del sistema">
-          🛡️ Bitácora ({{ auditoriaService.obtenerBitacora().length }})
+        <button *ngIf="esAdmin()" type="button" class="btn-auditoria-log" (click)="abrirModalAuditoria()" title="Consultar bitácora inalterable del sistema">
+          🛡️ Bitácora ({{ bitacora.length }})
         </button>
-        <span class="role-badge">Rol: Administrador / Gerente</span>
+        <span class="role-badge">{{ personal?.nombreCompleto }} — {{ rol }}</span>
       </div>
     </div>
 
     <!-- CU-12: Filtros de Búsqueda -->
-    <div class="filters-card">
+    <form class="filters-card" (ngSubmit)="buscar()">
       <div class="filters-grid">
         <div class="filter-item full-width">
-          <label for="buscarTexto">Buscar por código, motivo o palabra clave:</label>
-          <input 
-            type="text" 
-            id="buscarTexto" 
-            [(ngModel)]="filtroTexto" 
-            (input)="aplicarFiltros()" 
-            placeholder="Ej. QUE-2026-001, alimentos, factura..." />
+          <label for="buscarTexto">Buscar por palabra clave (código o descripción):</label>
+          <input type="text" id="buscarTexto" name="texto" [(ngModel)]="filtroTexto" placeholder="Ej. QUE-COM-1, comida fría..." />
+        </div>
+
+        <div class="filter-item">
+          <label for="filtroIdentificador">Código del caso (máx. 20):</label>
+          <input type="text" id="filtroIdentificador" name="identificador" [(ngModel)]="filtroIdentificador" maxlength="20" />
+        </div>
+
+        <div class="filter-item">
+          <label for="filtroCorreo">Correo del usuario (máx. 100):</label>
+          <input type="text" id="filtroCorreo" name="correo" [(ngModel)]="filtroCorreo" maxlength="100" />
         </div>
 
         <div class="filter-item">
           <label for="filtroSucursal">Sucursal:</label>
-          <select id="filtroSucursal" [(ngModel)]="filtroSucursal" (change)="aplicarFiltros()">
-            <option *ngFor="let suc of sucursalesDisponibles" [value]="suc">{{ suc }}</option>
+          <select id="filtroSucursal" name="sucursal" [(ngModel)]="filtroSucursal">
+            <option [ngValue]="null">Todas</option>
+            <option *ngFor="let suc of sucursalesDisponibles" [ngValue]="suc.idSucursal">{{ suc.nombreSucursal }}</option>
           </select>
         </div>
 
         <div class="filter-item">
           <label for="filtroTipo">Tipo de caso:</label>
-          <select id="filtroTipo" [(ngModel)]="filtroTipo" (change)="aplicarFiltros()">
-            <option *ngFor="let t of tiposDisponibles" [value]="t">{{ t }}</option>
+          <select id="filtroTipo" name="tipo" [(ngModel)]="filtroTipo">
+            <option [ngValue]="null">Todos</option>
+            <option *ngFor="let t of tiposDisponibles" [ngValue]="t.idTipoCaso">{{ t.nombre }}</option>
+          </select>
+        </div>
+
+        <div class="filter-item">
+          <label for="filtroCategoria">Categoría de servicio:</label>
+          <select id="filtroCategoria" name="categoria" [(ngModel)]="filtroCategoria">
+            <option [ngValue]="null">Todas</option>
+            <option *ngFor="let c of categoriasDisponibles" [ngValue]="c.idCategoria">{{ c.nombre }}</option>
           </select>
         </div>
 
         <div class="filter-item">
           <label for="filtroEstado">Estado:</label>
-          <select id="filtroEstado" [(ngModel)]="filtroEstado" (change)="aplicarFiltros()">
-            <option *ngFor="let est of estadosFiltroDisponibles" [value]="est">{{ est }}</option>
+          <select id="filtroEstado" name="estado" [(ngModel)]="filtroEstado">
+            <option [ngValue]="null">Todos</option>
+            <option *ngFor="let est of estadosDisponibles" [ngValue]="est.idEstado">{{ est.nombre }}</option>
           </select>
         </div>
 
         <div class="filter-item">
           <label for="filtroResponsable">Responsable asignado:</label>
-          <select id="filtroResponsable" [(ngModel)]="filtroResponsable" (change)="aplicarFiltros()">
-            <option *ngFor="let resp of responsablesFiltroDisponibles" [value]="resp">{{ resp }}</option>
+          <select id="filtroResponsable" name="responsable" [(ngModel)]="filtroResponsable">
+            <option [ngValue]="null">Todos</option>
+            <option [ngValue]="-1">Sin asignar</option>
+            <option *ngFor="let e of empleados" [ngValue]="e.idPersonal">{{ e.nombreCompleto }}</option>
           </select>
         </div>
 
         <div class="filter-item">
-          <label for="filtroDesde">Fecha creación desde:</label>
-          <input type="date" id="filtroDesde" [(ngModel)]="filtroFechaDesde" (change)="aplicarFiltros()" />
+          <label for="filtroDesde">Fecha inicial:</label>
+          <input type="date" id="filtroDesde" name="desde" [(ngModel)]="filtroFechaDesde" />
         </div>
 
         <div class="filter-item">
-          <label for="filtroHasta">Fecha creación hasta:</label>
-          <input type="date" id="filtroHasta" [(ngModel)]="filtroFechaHasta" (change)="aplicarFiltros()" />
+          <label for="filtroHasta">Fecha final:</label>
+          <input type="date" id="filtroHasta" name="hasta" [(ngModel)]="filtroFechaHasta" />
+        </div>
+
+        <div class="filter-item">
+          <label for="ordenarPor">Ordenar por:</label>
+          <select id="ordenarPor" name="ordenarPor" [(ngModel)]="ordenarPor" (change)="buscar()">
+            <option value="fecha">Fecha de creación</option>
+            <option value="estado">Estado</option>
+            <option value="tipo">Tipo de caso</option>
+            <option value="sucursal">Sucursal</option>
+            <option value="identificador">Código</option>
+          </select>
+        </div>
+
+        <div class="filter-item">
+          <label for="direccion">Orden:</label>
+          <select id="direccion" name="direccion" [(ngModel)]="direccion" (change)="buscar()">
+            <option value="desc">Descendente</option>
+            <option value="asc">Ascendente</option>
+          </select>
         </div>
       </div>
 
+      <div *ngIf="mensajeErrorBusqueda" class="alert alert-danger">{{ mensajeErrorBusqueda }}</div>
+
       <div class="filter-actions">
         <span class="results-counter">
-          Mostrando <strong>{{ casosFiltrados.length }}</strong> de <strong>{{ casos.length }}</strong> casos
+          <strong>{{ casosFiltrados.length }}</strong> caso(s) encontrado(s)
         </span>
-        <button type="button" class="btn-clear" (click)="limpiarFiltros()">
-          Limpiar Filtros
-        </button>
+        <div>
+          <button type="button" class="btn-clear" (click)="limpiarFiltros()">Limpiar Filtros</button>
+          <button type="submit" class="btn-action-primary" [disabled]="buscando">{{ buscando ? 'Buscando...' : 'Buscar' }}</button>
+        </div>
       </div>
-    </div>
+    </form>
+
+    <div *ngIf="mensajeAccion" class="alert alert-success" (click)="limpiarAviso()">{{ mensajeAccion }}</div>
+    <div *ngIf="errorAccion" class="alert alert-danger" (click)="limpiarAviso()">{{ errorAccion }}</div>
 
     <!-- Tabla de Casos -->
     <div class="table-card">
@@ -114,7 +157,7 @@
               <td>{{ caso.tipoCaso }}</td>
               <td>{{ caso.sucursal }}</td>
               <td>{{ caso.categoria }}</td>
-              <td>{{ caso.fechaCreacion }}</td>
+              <td>{{ caso.fechaCreacion | date:'dd/MM/yyyy' }}</td>
               <td>
                 <span class="badge" [ngClass]="obtenerClaseEstado(caso.estado)">
                   {{ caso.estado }}
@@ -131,11 +174,17 @@
               <td>
                 <div class="actions-wrapper">
                   <!-- CU-10: Gestionar Estado -->
-                  <button type="button" class="btn-action-primary" (click)="abrirModalGestion(caso)">
+                  <button *ngIf="esAdminOGerente()" type="button" class="btn-action-primary" (click)="abrirModalGestion(caso)">
                     Gestionar
                   </button>
 
-                  <!-- CU-13: Reasignar Caso -->
+                  <!-- CU-11, FA01: el Gerente aprueba la respuesta de un Operador -->
+                  <button *ngIf="puedeAprobar(caso)" type="button" class="btn-action-success" (click)="aprobarRespuesta(caso)">
+                    Aprobar respuesta
+                  </button>
+                  <small *ngIf="tieneRespuestaPendiente(caso)" class="tag-reasignado">Pendiente de aprobación</small>
+
+                  <!-- CU-10: Reasignar Caso -->
                   <button 
                     *ngIf="puedeReasignar(caso)" 
                     type="button" 
@@ -186,7 +235,7 @@
         <p><strong>Sucursal:</strong> {{ casoSeleccionado.sucursal }}</p>
         <p><strong>Motivo inicial:</strong> {{ casoSeleccionado.motivo }}</p>
         <p><strong>Detalle:</strong> {{ casoSeleccionado.detalle }}</p>
-        <p><strong>Notificación asociada a:</strong> {{ casoSeleccionado.correoCliente }}</p>
+        <p><strong>Notificación asociada a:</strong> {{ casoSeleccionado.correoCliente || 'Denuncia anónima (datos reservados)' }}</p>
       </div>
 
       <div *ngIf="casoSeleccionado.estado === 'Reapertura solicitada'" class="alert-reapertura">
@@ -202,8 +251,8 @@
         <div class="form-group">
           <label for="empleado">Empleado responsable asignado (Opcional):</label>
           <select id="empleado" formControlName="empleadoAsignado">
-            <option value="">-- Sin asignar --</option>
-            <option *ngFor="let emp of empleados" [value]="emp">{{ emp }}</option>
+            <option [ngValue]="null">-- Sin asignar --</option>
+            <option *ngFor="let emp of empleados" [ngValue]="emp.idPersonal">{{ emp.nombreCompleto }} ({{ emp.rol.nombre }})</option>
           </select>
         </div>
 
@@ -247,7 +296,8 @@
     <div class="modal-body">
       <div class="info-box">
         <p><strong>Caso:</strong> {{ casoSeleccionado.motivo }} ({{ casoSeleccionado.sucursal }})</p>
-        <p><strong>Destinatario cliente:</strong> {{ casoSeleccionado.correoCliente }}</p>
+        <p><strong>Destinatario cliente:</strong> {{ casoSeleccionado.correoCliente || 'Denuncia anónima (datos reservados)' }}</p>
+        <p *ngIf="rol === 'Operador'"><em>Su respuesta quedará pendiente del visto bueno del Gerente.</em></p>
       </div>
 
       <div *ngIf="mensajeErrorRespuesta" class="alert alert-danger">{{ mensajeErrorRespuesta }}</div>
@@ -297,7 +347,7 @@
   </div>
 </div>
 
-<!-- Modal CU-13: Reasignar Caso -->
+<!-- Modal CU-10: Reasignar Caso -->
 <div *ngIf="mostrarModalReasignar && casoSeleccionado" class="modal-backdrop">
   <div class="modal-card modal-reasignar">
     <div class="modal-header">
@@ -330,8 +380,8 @@
         <div class="form-group">
           <label for="nuevoResponsable">Nuevo empleado responsable (*):</label>
           <select id="nuevoResponsable" formControlName="nuevoResponsable">
-            <option value="" disabled>-- Seleccione un nuevo encargado --</option>
-            <option *ngFor="let emp of empleadosReasignables" [value]="emp">{{ emp }}</option>
+            <option [ngValue]="null" disabled>-- Seleccione un nuevo encargado --</option>
+            <option *ngFor="let emp of empleadosReasignables" [ngValue]="emp.idPersonal">{{ emp.nombreCompleto }} ({{ emp.rol.nombre }})</option>
           </select>
         </div>
 
@@ -369,11 +419,11 @@
         Registro auditable de notificaciones disparadas por eventos de cambio de estado, respuesta oficial o reasignación.
       </p>
 
-      <div *ngIf="notifService.obtenerHistorial().length === 0" class="empty-state-notifs">
-        <p>Aún no se han disparado notificaciones automáticas en esta sesión.</p>
+      <div *ngIf="notificaciones.length === 0" class="empty-state-notifs">
+        <p>Aún no se han generado notificaciones automáticas.</p>
       </div>
 
-      <div class="notif-table-wrapper" *ngIf="notifService.obtenerHistorial().length > 0">
+      <div class="notif-table-wrapper" *ngIf="notificaciones.length > 0">
         <table class="notif-table">
           <thead>
             <tr>
@@ -386,15 +436,15 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let n of notifService.obtenerHistorial()">
-              <td><strong>{{ n.codigoCaso }}</strong></td>
-              <td>{{ n.destinatarioEmail }}</td>
-              <td><span class="role-pill">{{ n.destinatarioRol }}</span></td>
-              <td class="asunto-col" [title]="n.cuerpo">{{ n.asunto }}</td>
-              <td><small>{{ n.fechaHora }}</small></td>
+            <tr *ngFor="let n of notificaciones">
+              <td><strong>{{ n.caso?.identificadorVisible }}</strong></td>
+              <td>{{ n.correoDestino }}</td>
+              <td><span class="role-pill">{{ n.usuario ? 'Cliente' : 'Personal Administrativo' }}</span></td>
+              <td class="asunto-col" [title]="n.contenido">{{ n.asunto }}</td>
+              <td><small>{{ n.fechaEnvio | date:'dd/MM/yyyy HH:mm:ss' }}</small></td>
               <td>
                 <span class="badge-notif" [ngClass]="n.estadoEnvio === 'Enviado' ? 'badge-notif-enviado' : 'badge-notif-fallido'">
-                  {{ n.estadoEnvio }}
+                  {{ n.estadoEnvio }}<span *ngIf="n.reintentos > 0"> ({{ n.reintentos }} reintentos)</span>
                 </span>
               </td>
             </tr>
@@ -422,11 +472,11 @@
         Mecanismo transversal de trazabilidad inalterable. Registra usuario, rol, IP, operación y marca temporal exacta con milisegundos.
       </p>
 
-      <div *ngIf="auditoriaService.obtenerBitacora().length === 0" class="empty-state-notifs">
-        <p>Aún no se han registrado eventos auditables en esta sesión.</p>
+      <div *ngIf="bitacora.length === 0" class="empty-state-notifs">
+        <p>Aún no se han registrado eventos auditables.</p>
       </div>
 
-      <div class="notif-table-wrapper" *ngIf="auditoriaService.obtenerBitacora().length > 0">
+      <div class="notif-table-wrapper" *ngIf="bitacora.length > 0">
         <table class="notif-table">
           <thead>
             <tr>
@@ -435,12 +485,13 @@
               <th>Usuario / Proceso</th>
               <th>Operación</th>
               <th>Módulo</th>
+              <th>IP</th>
               <th>Detalles</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let audit of auditoriaService.obtenerBitacora()">
-              <td><code>{{ audit.id }}</code></td>
+            <tr *ngFor="let audit of bitacora">
+              <td><code>AUD-{{ audit.idBitacora }}</code></td>
               <td><small>{{ audit.fechaHoraExacta }}</small></td>
               <td>
                 <strong>{{ audit.usuarioId }}</strong>
@@ -449,6 +500,7 @@
               </td>
               <td><span class="badge-audit-accion">{{ audit.tipoAccion }}</span></td>
               <td>{{ audit.moduloAfectado }}</td>
+              <td><small>{{ audit.direccionIp }}</small></td>
               <td>
                 <button type="button" class="btn-ver-diff" (click)="verDetalleAuditoria(audit)">
                   Ver Cambios
@@ -459,24 +511,24 @@
         </table>
       </div>
 
-      <!-- Detalle Formateado de Cambios Anteriores vs Nuevos -->
+      <!-- Detalle del registro (valores anteriores y nuevos cuando aplica) -->
       <div *ngIf="registroAuditoriaSeleccionado" class="diff-container">
-        <h4>Detalle de Trazabilidad: {{ registroAuditoriaSeleccionado.id }}</h4>
+        <h4>Detalle de Trazabilidad: AUD-{{ registroAuditoriaSeleccionado.idBitacora }}<span *ngIf="registroAuditoriaSeleccionado.identificadorCaso"> — Caso {{ registroAuditoriaSeleccionado.identificadorCaso }}</span></h4>
         <div class="diff-grid">
-          
-          <div class="diff-box">
+
+          <div class="diff-box" *ngIf="detalleAuditoria(registroAuditoriaSeleccionado).anterior as anterior">
             <span class="diff-tag diff-before">Valores Anteriores</span>
             <ul class="diff-lista">
-              <li *ngFor="let item of obtenerPropiedadesAuditoria(registroAuditoriaSeleccionado.valoresAnteriores)">
+              <li *ngFor="let item of anterior">
                 <strong>{{ item.clave }}:</strong> <span>{{ item.valor }}</span>
               </li>
             </ul>
           </div>
 
           <div class="diff-box">
-            <span class="diff-tag diff-after">Valores Nuevos</span>
+            <span class="diff-tag diff-after">{{ detalleAuditoria(registroAuditoriaSeleccionado).anterior ? 'Valores Nuevos' : 'Detalle de la operación' }}</span>
             <ul class="diff-lista">
-              <li *ngFor="let item of obtenerPropiedadesAuditoria(registroAuditoriaSeleccionado.valoresNuevos)">
+              <li *ngFor="let item of detalleAuditoria(registroAuditoriaSeleccionado).nuevo">
                 <strong>{{ item.clave }}:</strong> <span>{{ item.valor }}</span>
               </li>
             </ul>

@@ -72,6 +72,7 @@ export class ConsultarCasosComponent implements OnInit {
   mostrarModalReapertura: boolean = false;
   reaperturaForm!: FormGroup;
   archivoReaperturaNombre: string = '';
+  archivoReapertura: File | null = null;
   mensajeErrorReapertura: string = '';
   mensajeExitoReapertura: string = '';
 
@@ -137,6 +138,26 @@ export class ConsultarCasosComponent implements OnInit {
   verDetalle(caso: Caso): void {
     this.casoSeleccionado = caso;
     this.mostrarModalDetalle = true;
+    this.cargarDetalle(caso);
+  }
+
+  // CU-06 paso 5 / CU-11: trae la respuesta oficial y la fecha de cierre del caso.
+  private cargarDetalle(caso: Caso, alTerminar?: () => void): void {
+    this.casoService.detalle(caso.idCaso).subscribe({
+      next: (detalle) => {
+        const aprobada = detalle.respuestas.find(r => r.estadoAprobacion === 'Aprobada');
+        if (aprobada) {
+          caso.respuesta = aprobada.titulo + '\n' + aprobada.contenido
+            + (aprobada.accionesSeguimiento ? '\nCompensación / seguimiento: ' + aprobada.accionesSeguimiento : '');
+        }
+        const cierre = detalle.historial.find(h => h.estadoNuevo.nombre === 'Cerrado');
+        if (cierre) {
+          caso.fechaCierre = cierre.fechaCambio;
+        }
+        alTerminar?.();
+      },
+      error: () => alTerminar?.()
+    });
   }
 
   cerrarModal(): void {
@@ -275,12 +296,16 @@ export class ConsultarCasosComponent implements OnInit {
     this.mensajeErrorReapertura = '';
     this.mensajeExitoReapertura = '';
     this.archivoReaperturaNombre = '';
+    this.archivoReapertura = null;
     this.reaperturaForm.reset({ motivo: '' });
-
-    if (this.estaPlazoReaperturaVencido(caso)) {
-      this.mensajeErrorReapertura = 'El plazo para solicitar la reapertura ha vencido. Puede registrar un nuevo caso (CU-05)';
-    }
     this.mostrarModalReapertura = true;
+
+    // FA01: se valida el plazo de 15 días con la fecha de cierre real del caso.
+    this.cargarDetalle(caso, () => {
+      if (this.estaPlazoReaperturaVencido(caso)) {
+        this.mensajeErrorReapertura = 'El plazo para solicitar la reapertura ha vencido. Puede registrar un nuevo caso (CU-05)';
+      }
+    });
   }
 
   cerrarModalReapertura(): void {
@@ -288,6 +313,7 @@ export class ConsultarCasosComponent implements OnInit {
     this.mensajeErrorReapertura = '';
     this.mensajeExitoReapertura = '';
     this.archivoReaperturaNombre = '';
+    this.archivoReapertura = null;
   }
 
   onArchivoReaperturaSeleccionado(event: Event): void {
@@ -301,6 +327,7 @@ export class ConsultarCasosComponent implements OnInit {
         return;
       }
       this.archivoReaperturaNombre = archivo.name;
+      this.archivoReapertura = archivo;
     }
   }
 
@@ -309,22 +336,31 @@ export class ConsultarCasosComponent implements OnInit {
     const motivo = this.reaperturaForm.get('motivo')?.value?.trim();
 
     if (!motivo || motivo.length < 10) {
-      this.mensajeErrorReapertura = 'Debe ingresar los campos obligatorios: Motivo de reapertura (mínimo 10 caracteres)';
+      this.mensajeErrorReapertura = 'Debe ingresar los campos obligatorios: Motivo de reapertura';
       return;
     }
 
-    this.casoSeleccionado.estado = 'Reapertura solicitada';
-    this.casoSeleccionado.reapertura = {
-      motivo,
-      archivoEvidencia: this.archivoReaperturaNombre || undefined,
-      fechaSolicitud: new Date().toISOString()
-    };
+    const caso = this.casoSeleccionado;
+    this.casoService.solicitarReapertura(caso.idCaso, motivo, this.archivoReapertura).subscribe({
+      next: (casoApi) => {
+        caso.estado = casoApi.estadoCaso.nombre;
+        caso.reapertura = {
+          motivo,
+          archivoEvidencia: this.archivoReaperturaNombre || undefined,
+          fechaSolicitud: new Date().toISOString()
+        };
 
-    const index = this.casos.findIndex(c => c.id === this.casoSeleccionado?.id);
-    if (index !== -1) this.casos[index] = { ...this.casoSeleccionado };
-    this.aplicarFiltros();
-    this.mensajeExitoReapertura = 'Solicitud de reapertura enviada correctamente';
-    setTimeout(() => this.cerrarModalReapertura(), 1500);
+        const index = this.casos.findIndex(c => c.idCaso === caso.idCaso);
+        if (index !== -1) this.casos[index] = { ...caso };
+        this.aplicarFiltros();
+        this.mensajeExitoReapertura = 'Solicitud de reapertura enviada correctamente';
+        setTimeout(() => this.cerrarModalReapertura(), 1500);
+      },
+      // FA01 (plazo vencido) / FA02 (motivo no ingresado): mensajes exactos del servidor
+      error: (err) => {
+        this.mensajeErrorReapertura = err.error?.message ?? 'No se pudo enviar la solicitud de reapertura';
+      }
+    });
   }
 
   obtenerClaseEstado(estado: string): string {

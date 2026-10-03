@@ -17,6 +17,10 @@ export class CatalogoService {
     return this.http.get<CategoriaCaso[]>(`${API_BASE_URL}/categorias-caso`);
   }
 
+  estados(): Observable<{ idEstado: number; nombre: string }[]> {
+    return this.http.get<{ idEstado: number; nombre: string }[]>(`${API_BASE_URL}/estados-caso`);
+  }
+
   sucursales(): Observable<Sucursal[]> {
     return this.http.get<Sucursal[]>(`${API_BASE_URL}/sucursales`);
   }
