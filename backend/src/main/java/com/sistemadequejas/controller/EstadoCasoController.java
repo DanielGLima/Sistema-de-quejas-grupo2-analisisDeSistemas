@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+// Solo lectura. La administracion es CU-13 (/api/admin/catalogos).
 @RestController
 @RequestMapping("/api/estados-caso")
 public class EstadoCasoController {
@@ -25,28 +26,5 @@ public class EstadoCasoController {
         return estadoCasoService.findById(id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-    @PostMapping
-    public EstadoCaso create(@RequestBody EstadoCaso estadoCaso) {
-        return estadoCasoService.save(estadoCaso);
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<EstadoCaso> update(@PathVariable Integer id, @RequestBody EstadoCaso estadoCaso) {
-        if (estadoCasoService.findById(id).isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        estadoCaso.setIdEstado(id);
-        return ResponseEntity.ok(estadoCasoService.save(estadoCaso));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Integer id) {
-        if (estadoCasoService.findById(id).isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        estadoCasoService.deleteById(id);
-        return ResponseEntity.noContent().build();
     }
 }

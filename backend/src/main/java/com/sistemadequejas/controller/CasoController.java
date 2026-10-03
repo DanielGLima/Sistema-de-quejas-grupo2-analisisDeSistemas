@@ -53,7 +53,7 @@ public class CasoController {
     private BitacoraAuditoriaService bitacoraAuditoriaService;
 
     @Autowired
-    private EmailService emailService;
+    private NotificacionService notificacionService;
 
     // FA02: formato alfanumerico simple (letras, numeros y guiones).
     private static final java.util.regex.Pattern PATRON_FACTURA = java.util.regex.Pattern.compile("^[A-Za-z0-9-]+$");
@@ -74,7 +74,10 @@ public class CasoController {
                 .map(caso -> ResponseEntity.ok(new CasoDetalleResponse(
                         caso,
                         evidenciaCasoService.findByCaso(caso),
-                        historialEstadoCasoService.findByCaso(caso)
+                        historialEstadoCasoService.findByCaso(caso),
+                        casoService.respuestasDe(caso).stream()
+                                .filter(r -> RespuestaCaso.APROBADA.equals(r.getEstadoAprobacion()))
+                                .toList()
                 )))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
@@ -138,11 +141,13 @@ public class CasoController {
         }
 
         // Paso 7: notifica al usuario por correo con el numero de seguimiento (CU-14).
-        emailService.enviar(
-                usuario.getCorreo(),
+        notificacionService.notificarUsuario(
+                guardado,
+                usuario,
+                "REGISTRO_CASO",
                 "Caso registrado - " + guardado.getIdentificadorVisible(),
                 "Tu caso fue registrado exitosamente. Numero de seguimiento: " + guardado.getIdentificadorVisible()
-                        + "\n\nPuedes consultar su estado desde 'Mis casos' en el Sistema de Quejas."
+                        + ". Puedes consultar su estado desde 'Mis casos' en el Sistema de Quejas."
         );
 
         bitacoraAuditoriaService.registrarAccionUsuarioSobreCaso(usuario, guardado, "Registro de caso", "CU-05",
@@ -171,7 +176,21 @@ public class CasoController {
         Usuario usuario = usuarioAutenticado(session);
         Caso caso = casoPropio(id, usuario);
         EvaluacionCaso evaluacion = casoService.evaluar(caso, request.getCalificacion(), request.getComentario());
+        bitacoraAuditoriaService.registrarAccionUsuarioSobreCaso(usuario, caso, "Evaluacion de atencion", "CU-08",
+                BitacoraAuditoriaService.json("caso", caso.getIdentificadorVisible(), "calificacion", String.valueOf(request.getCalificacion())));
         return ResponseEntity.status(HttpStatus.CREATED).body(evaluacion);
+    }
+
+    // CU-09: solicita la reapertura de un caso cerrado propio (evidencia opcional).
+    @PostMapping(value = "/{id}/reapertura", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Caso> solicitarReapertura(
+            @PathVariable Integer id,
+            @RequestParam(required = false) String motivo,
+            @RequestParam(value = "archivo", required = false) MultipartFile archivo,
+            HttpSession session) {
+        Usuario usuario = usuarioAutenticado(session);
+        Caso caso = casoPropio(id, usuario);
+        return ResponseEntity.ok(casoService.solicitarReapertura(caso, usuario, motivo, archivo));
     }
 
     private Caso casoPropio(Integer id, Usuario usuario) {

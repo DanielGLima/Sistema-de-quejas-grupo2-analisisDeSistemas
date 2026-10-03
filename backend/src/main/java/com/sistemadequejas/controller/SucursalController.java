@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+// Solo lectura publica (sucursales activas). La administracion es CU-13 (/api/admin/catalogos).
 @RestController
 @RequestMapping("/api/sucursales")
 public class SucursalController {
@@ -17,7 +18,7 @@ public class SucursalController {
 
   @GetMapping
   public List<Sucursal> findAll(){
-    return sucursalService.findAll();
+    return sucursalService.findAll().stream().filter(Sucursal::isActivo).toList();
   }
 
   @GetMapping("/{id}")
@@ -26,28 +27,4 @@ public class SucursalController {
       .map(ResponseEntity::ok)
       .orElseGet(() -> ResponseEntity.notFound().build());
   }
-
-  @PostMapping
-  public Sucursal create(@RequestBody Sucursal sucursal){
-    return sucursalService.save(sucursal);
-  }
-
-  @PutMapping("/{id}")
-  public ResponseEntity<Sucursal> update(@PathVariable Integer id, @RequestBody Sucursal sucursal) {
-    if (sucursalService.findById(id).isEmpty()) {
-      return ResponseEntity.notFound().build();
-    }
-    sucursal.setIdSucursal(id);
-    return ResponseEntity.ok(sucursalService.save(sucursal));
-  }
-
-
-    @DeleteMapping("/{id}")
-      public ResponseEntity<Void> delete(@PathVariable Integer id){
-      if (sucursalService.findById(id).isEmpty()){
-        return ResponseEntity.notFound().build();
-      }
-      sucursalService.deleteById(id);
-      return ResponseEntity.noContent().build();
-    }
 }
