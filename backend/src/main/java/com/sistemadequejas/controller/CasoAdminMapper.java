@@ -26,9 +26,8 @@ public class CasoAdminMapper {
     private HistorialEstadoCasoService historialEstadoCasoService;
 
     public CasoAdminResponse toResponse(Caso caso, Personal actor, boolean conDetalle) {
-        // Las denuncias anonimas ocultan los datos del cliente salvo al Administrador General.
-        boolean ocultarCliente = Boolean.TRUE.equals(caso.getEsAnonimo())
-                && !PersonalService.ROL_ADMINISTRADOR.equals(actor.getRol().getNombre());
+        // CU-05 FA04: las denuncias anonimas ocultan los datos personales en TODOS los paneles administrativos.
+        boolean ocultarCliente = Boolean.TRUE.equals(caso.getEsAnonimo());
 
         List<ReaperturaCaso> reaperturas = casoService.reaperturasDe(caso);
         String motivoReapertura = reaperturas.isEmpty() ? null : reaperturas.get(0).getMotivo();

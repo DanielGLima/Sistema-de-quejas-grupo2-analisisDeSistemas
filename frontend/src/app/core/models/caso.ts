@@ -20,6 +20,7 @@ export interface Caso {
   categoriaCaso?: { idCategoria: number; nombre: string };
   estadoCaso: { idEstado: number; nombre: string };
   evaluacion?: EvaluacionCasoApi;
+  personalAsignado?: { idPersonal: number } | null;
 }
 
 export interface RespuestaOficialApi {
@@ -33,7 +34,8 @@ export interface RespuestaOficialApi {
 
 export interface CasoDetalle {
   caso: Caso;
-  historial: { estadoNuevo: { nombre: string }; fechaCambio: string }[];
+  evidencias: { idEvidencia: number; urlArchivo: string; tipoArchivo: string }[];
+  historial: { estadoNuevo: { nombre: string }; fechaCambio: string; observacion?: string }[];
   respuestas: RespuestaOficialApi[];
 }
 

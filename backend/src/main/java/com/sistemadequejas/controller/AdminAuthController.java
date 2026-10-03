@@ -28,8 +28,8 @@ public class AdminAuthController {
     public ResponseEntity<Personal> login(@RequestBody LoginRequest request, HttpSession session) {
         Personal personal = personalService.autenticar(request.getCorreo(), request.getPassword());
         session.setAttribute(SesionPersonal.SESSION_ID_PERSONAL, personal.getIdPersonal());
-        bitacoraAuditoriaService.registrarAccionPersonal(personal, null, "Inicio de sesion", "ACCESO",
-                BitacoraAuditoriaService.json("rol", personal.getRol().getNombre()));
+        bitacoraAuditoriaService.registrarAccionPersonal(personal, null, "Inicio de sesión", "Acceso al portal",
+                BitacoraAuditoriaService.cambio("{}", BitacoraAuditoriaService.json("rol", personal.getRol().getNombre())));
         return ResponseEntity.ok(personal);
     }
 

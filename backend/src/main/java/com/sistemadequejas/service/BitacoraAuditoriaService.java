@@ -91,6 +91,11 @@ public class BitacoraAuditoriaService {
                 .getContent();
     }
 
+    // Junta los valores anteriores y nuevos en el formato JSON que exige CU-15.
+    public static String cambio(String anteriorJson, String nuevoJson) {
+        return "{\"anterior\":" + anteriorJson + ",\"nuevo\":" + nuevoJson + "}";
+    }
+
     // Arma un JSON simple {"clave":"valor",...} para el detalle (valores anteriores / nuevos).
     public static String json(String... paresClaveValor) {
         StringBuilder sb = new StringBuilder("{");

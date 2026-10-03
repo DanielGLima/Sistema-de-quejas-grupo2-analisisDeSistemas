@@ -169,9 +169,37 @@ export class GestionarCasosComponent implements OnInit {
     this.adminService.empleadosAsignables().subscribe(e => this.empleados = e);
   }
 
+  // Inserta las diagonales mientras se escribe DD/MM/AAAA (solo dígitos, máximo 8).
+  mascaraFecha(valor: string): string {
+    const digitos = (valor ?? '').replace(/\D/g, '').slice(0, 8);
+    if (digitos.length > 4) return `${digitos.slice(0, 2)}/${digitos.slice(2, 4)}/${digitos.slice(4)}`;
+    if (digitos.length > 2) return `${digitos.slice(0, 2)}/${digitos.slice(2)}`;
+    return digitos;
+  }
+
+  // Valida que el texto sea una fecha real DD/MM/AAAA; devuelve false si es inválida.
+  private fechaValida(texto: string): boolean {
+    if (!texto) return true;
+    const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(texto);
+    if (!m) return false;
+    const d = Number(m[1]), mes = Number(m[2]), a = Number(m[3]);
+    const f = new Date(a, mes - 1, d);
+    return f.getFullYear() === a && f.getMonth() === mes - 1 && f.getDate() === d;
+  }
+
   // --- CU-12: búsqueda en el servidor ---
   buscar(alTerminar?: () => void): void {
     this.mensajeErrorBusqueda = '';
+
+    // FA02: criterios inválidos, indicando cómo corregirlos
+    if (!this.fechaValida(this.filtroFechaDesde)) {
+      this.mensajeErrorBusqueda = 'La fecha inicial es inválida. Use el formato DD/MM/AAAA';
+      return;
+    }
+    if (!this.fechaValida(this.filtroFechaHasta)) {
+      this.mensajeErrorBusqueda = 'La fecha final es inválida. Use el formato DD/MM/AAAA';
+      return;
+    }
     this.buscando = true;
 
     this.adminService.buscarCasos({

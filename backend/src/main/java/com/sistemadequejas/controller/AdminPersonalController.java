@@ -48,9 +48,10 @@ public class AdminPersonalController {
         Personal creado = personalService.crear(request.nombreCompleto(), request.correo(), request.idRol(),
                 request.idSucursal(), request.activo(), request.passwordTemporal());
 
-        bitacoraAuditoriaService.registrarAccionPersonal(actor, null, "Alta de usuario interno", "CU-13",
-                BitacoraAuditoriaService.json("correo", creado.getCorreo(), "rol", creado.getRol().getNombre(),
-                        "sucursal", creado.getSucursal().getNombreSucursal()));
+        bitacoraAuditoriaService.registrarAccionPersonal(actor, null, "Alta de usuario interno", "Administración interna",
+                BitacoraAuditoriaService.cambio("{}", BitacoraAuditoriaService.json("correo", creado.getCorreo(),
+                        "rol", creado.getRol().getNombre(), "sucursal", creado.getSucursal().getNombreSucursal(),
+                        "cuenta", Boolean.TRUE.equals(creado.getActivo()) ? "Activa" : "Inactiva")));
         return ResponseEntity.status(HttpStatus.CREATED).body(creado);
     }
 
@@ -61,13 +62,16 @@ public class AdminPersonalController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario interno no encontrado"));
 
         String anterior = BitacoraAuditoriaService.json("correo", personal.getCorreo(), "rol", personal.getRol().getNombre(),
-                "activo", String.valueOf(personal.getActivo()));
+                "sucursal", personal.getSucursal() == null ? "" : personal.getSucursal().getNombreSucursal(),
+                "cuenta", Boolean.TRUE.equals(personal.getActivo()) ? "Activa" : "Inactiva");
         Personal actualizado = personalService.actualizar(personal, request.nombreCompleto(), request.correo(), request.idRol(),
                 request.idSucursal(), request.activo(), request.passwordTemporal());
 
-        bitacoraAuditoriaService.registrarAccionPersonal(actor, null, "Modificacion de usuario interno", "CU-13",
-                "{\"anterior\":" + anterior + ",\"nuevo\":" + BitacoraAuditoriaService.json("correo", actualizado.getCorreo(),
-                        "rol", actualizado.getRol().getNombre(), "activo", String.valueOf(actualizado.getActivo())) + "}");
+        bitacoraAuditoriaService.registrarAccionPersonal(actor, null, "Modificación de usuario interno", "Administración interna",
+                BitacoraAuditoriaService.cambio(anterior, BitacoraAuditoriaService.json("correo", actualizado.getCorreo(),
+                        "rol", actualizado.getRol().getNombre(),
+                        "sucursal", actualizado.getSucursal() == null ? "" : actualizado.getSucursal().getNombreSucursal(),
+                        "cuenta", Boolean.TRUE.equals(actualizado.getActivo()) ? "Activa" : "Inactiva")));
         return actualizado;
     }
 }

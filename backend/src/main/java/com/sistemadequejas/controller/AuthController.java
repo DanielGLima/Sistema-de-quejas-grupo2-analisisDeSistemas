@@ -5,6 +5,7 @@ import com.sistemadequejas.dto.LoginRequest;
 import com.sistemadequejas.dto.RecuperarConfirmarRequest;
 import com.sistemadequejas.dto.RecuperarSolicitarRequest;
 import com.sistemadequejas.dto.RegistroRequest;
+import com.sistemadequejas.config.SesionesActivas;
 import com.sistemadequejas.model.RecuperacionContrasena;
 import com.sistemadequejas.model.Usuario;
 import com.sistemadequejas.service.BitacoraAuditoriaService;
@@ -38,6 +39,9 @@ public class AuthController {
     @Autowired
     private EmailService emailService;
 
+    @Autowired
+    private SesionesActivas sesionesActivas;
+
     // CU-01, FA01.1: permite validar el correo antes de pedir la contrasena.
     @GetMapping("/correo-disponible")
     public ResponseEntity<Map<String, Boolean>> correoDisponible(@RequestParam String correo) {
@@ -58,7 +62,6 @@ public class AuthController {
         usuario.setDireccion(request.getDireccion());
 
         Usuario creado = usuarioService.registrar(usuario, request.getPassword());
-        creado.setContrasenaHash(null);
         return ResponseEntity.status(HttpStatus.CREATED).body(creado);
     }
 
@@ -67,7 +70,7 @@ public class AuthController {
     public ResponseEntity<Usuario> login(@RequestBody LoginRequest request, HttpSession session) {
         Usuario usuario = usuarioService.autenticar(request.getCorreo(), request.getPassword());
         session.setAttribute(SESSION_ID_USUARIO, usuario.getIdUsuario());
-        usuario.setContrasenaHash(null);
+        sesionesActivas.registrar(usuario.getIdUsuario(), session);
         return ResponseEntity.ok(usuario);
     }
 
@@ -82,7 +85,6 @@ public class AuthController {
     @GetMapping("/me")
     public ResponseEntity<Usuario> me(HttpSession session) {
         Usuario usuario = usuarioAutenticado(session);
-        usuario.setContrasenaHash(null);
         return ResponseEntity.ok(usuario);
     }
 
@@ -91,30 +93,61 @@ public class AuthController {
     public ResponseEntity<Usuario> actualizarPerfil(@RequestBody ActualizarPerfilRequest request, HttpSession session) {
         Usuario usuario = usuarioAutenticado(session);
 
+        Usuario datosNuevos = new Usuario();
+        datosNuevos.setNombreCompleto(request.getNombreCompleto());
+        datosNuevos.setFechaNacimiento(request.getFechaNacimiento());
+        datosNuevos.setNacionalidad(request.getNacionalidad());
+        datosNuevos.setCorreo(request.getCorreo());
+        datosNuevos.setCodigoArea(request.getCodigoArea());
+        datosNuevos.setTelefono(request.getTelefono());
+        datosNuevos.setDireccion(request.getDireccion());
+
+        // Paso 5 / FA03: formato de datos no valido (se indica el campo con error).
+        usuarioService.validarDatosPerfil(datosNuevos);
         // FA02: el correo nuevo no debe pertenecer a otra cuenta (se valida ANTES de mutar la entidad).
         usuarioService.validarCorreoDisponibleParaOtroUsuario(request.getCorreo(), usuario.getIdUsuario());
 
-        usuario.setNombreCompleto(request.getNombreCompleto());
-        usuario.setFechaNacimiento(request.getFechaNacimiento());
-        usuario.setNacionalidad(request.getNacionalidad());
-        usuario.setCorreo(request.getCorreo());
-        usuario.setCodigoArea(request.getCodigoArea());
-        usuario.setTelefono(request.getTelefono());
-        usuario.setDireccion(request.getDireccion());
+        String anterior = BitacoraAuditoriaService.json(
+                "nombreCompleto", usuario.getNombreCompleto(),
+                "fechaNacimiento", String.valueOf(usuario.getFechaNacimiento()),
+                "nacionalidad", usuario.getNacionalidad(),
+                "correo", usuario.getCorreo(),
+                "codigoArea", usuario.getCodigoArea(),
+                "telefono", usuario.getTelefono(),
+                "direccion", usuario.getDireccion());
+
+        // FA01: si cambia la contrasena se valida la actual ANTES de aplicar cualquier cambio.
+        boolean cambiaPassword = request.getPasswordNueva() != null && !request.getPasswordNueva().isBlank();
+
+        usuario.setNombreCompleto(datosNuevos.getNombreCompleto());
+        usuario.setFechaNacimiento(datosNuevos.getFechaNacimiento());
+        usuario.setNacionalidad(datosNuevos.getNacionalidad());
+        usuario.setCorreo(datosNuevos.getCorreo());
+        usuario.setCodigoArea(datosNuevos.getCodigoArea());
+        usuario.setTelefono(datosNuevos.getTelefono());
+        usuario.setDireccion(datosNuevos.getDireccion());
 
         Usuario actualizado = usuarioService.actualizarPerfil(usuario, request.getPasswordActual(), request.getPasswordNueva());
-        actualizado.setContrasenaHash(null);
 
-        // CU-15: deja constancia del cambio en la bitacora de auditoria.
-        bitacoraAuditoriaService.registrarAccionUsuario(actualizado, "Actualizacion de perfil", "CU-03", "El usuario actualizo sus datos personales");
+        // Paso 7: registro en la bitacora de auditoria (CU-15) con valores anteriores y nuevos.
+        String nuevo = BitacoraAuditoriaService.json(
+                "nombreCompleto", actualizado.getNombreCompleto(),
+                "fechaNacimiento", String.valueOf(actualizado.getFechaNacimiento()),
+                "nacionalidad", actualizado.getNacionalidad(),
+                "correo", actualizado.getCorreo(),
+                "codigoArea", actualizado.getCodigoArea(),
+                "telefono", actualizado.getTelefono(),
+                "direccion", actualizado.getDireccion(),
+                "contraseñaModificada", cambiaPassword ? "Sí" : "No");
+        bitacoraAuditoriaService.registrarAccionUsuario(actualizado, "Actualización de perfil", "Perfil de usuario",
+                BitacoraAuditoriaService.cambio(anterior, nuevo));
 
         return ResponseEntity.ok(actualizado);
     }
 
     // CU-02 paso 1: genera el codigo de recuperacion y lo envia por correo.
-    // NOTA: por pedido explicito del usuario, aqui SI se revela si el correo
-    // esta registrado o no (diferente del mensaje neutro que indica el FA03
-    // original del documento; el documento se esta actualizando aparte).
+    // NOTA: por decision del equipo se revela si el correo esta registrado ("Correo no registrado"),
+    // en lugar del mensaje neutro del FA03 original; el documento CU-02 se actualizo en ese sentido.
     @PostMapping("/recuperar/solicitar")
     public ResponseEntity<Map<String, String>> recuperarSolicitar(@RequestBody RecuperarSolicitarRequest request) {
         Usuario usuario = usuarioService.buscarPorCorreo(request.getCorreo())
@@ -124,35 +157,43 @@ public class AuthController {
 
         boolean enviado = emailService.enviar(
                 request.getCorreo(),
-                "Recuperacion de contrasena - Sistema de Quejas Las Delicias",
-                "Tu codigo de recuperacion es: " + recuperacion.getCodigoToken()
-                        + "\n\nEste codigo vence en 15 minutos. Si no solicitaste este cambio, ignora este mensaje."
+                "Recuperación de contraseña - Sistema de Quejas Las Delicias",
+                "Tu código de recuperación es: " + recuperacion.getCodigoToken()
+                        + "\n\nEste código vence en 15 minutos. Si no solicitaste este cambio, ignora este mensaje."
         );
         if (!enviado) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
-                    "No se pudo enviar el correo con el codigo de recuperacion. Intente nuevamente en unos minutos");
+                    "No se pudo enviar el correo con el código de recuperación. Intente nuevamente en unos minutos");
         }
 
-        return ResponseEntity.ok(Map.of("mensaje", "Se enviaron instrucciones de recuperacion a tu correo"));
+        return ResponseEntity.ok(Map.of("mensaje", "Se enviaron instrucciones de recuperación a tu correo"));
     }
 
-    // CU-02 paso 2: valida el codigo y aplica la nueva contrasena.
+    // CU-02 pasos 6 a 9: valida el codigo y aplica la nueva contrasena.
     @PostMapping("/recuperar/confirmar")
     public ResponseEntity<Void> recuperarConfirmar(@RequestBody RecuperarConfirmarRequest request) {
         Usuario usuario = usuarioService.buscarPorCorreo(request.getCorreo())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El codigo de recuperacion ingresado es incorrecto"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El código de recuperación ingresado es incorrecto"));
 
-        recuperacionContrasenaService.validarYConsumirCodigo(usuario, request.getCodigo());
+        // FA05 / FA06: valida el codigo SIN consumirlo; FA08 / FA09 devuelven al paso 7 con el mismo codigo vigente.
+        RecuperacionContrasena recuperacion = recuperacionContrasenaService.validarCodigo(usuario, request.getCodigo());
         usuarioService.restablecerPassword(usuario, request.getPasswordNueva());
+        recuperacionContrasenaService.consumir(recuperacion);
+
+        // Postcondicion: las sesiones activas previas quedan invalidadas.
+        sesionesActivas.invalidarTodas(usuario.getIdUsuario());
+
+        bitacoraAuditoriaService.registrarAccionUsuario(usuario, "Restablecimiento de contraseña", "Recuperación de contraseña",
+                BitacoraAuditoriaService.cambio("{}", BitacoraAuditoriaService.json("contraseñaRestablecida", "Sí")));
         return ResponseEntity.noContent().build();
     }
 
     private Usuario usuarioAutenticado(HttpSession session) {
         Object idUsuario = session.getAttribute(SESSION_ID_USUARIO);
         if (idUsuario == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Debe iniciar sesion");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Debe iniciar sesión");
         }
         return usuarioService.findById((Integer) idUsuario)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Debe iniciar sesion"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Debe iniciar sesión"));
     }
 }

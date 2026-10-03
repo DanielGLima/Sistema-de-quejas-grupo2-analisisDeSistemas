@@ -1,5 +1,6 @@
 package com.sistemadequejas.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -15,6 +16,10 @@ import java.util.List;
 
 @Configuration
 public class SecurityConfig {
+
+    // Origenes permitidos (separados por coma). Por defecto solo el frontend Angular local.
+    @Value("${app.cors.origenes:http://localhost:4200}")
+    private List<String> origenesPermitidos;
 
     // Configuracion de desarrollo: abre /api/** sin el filtro de autorizacion
     // de Spring Security. El login/logout (CU-00, CU-04) usa HttpSession
@@ -39,7 +44,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:4200"));
+        configuration.setAllowedOrigins(origenesPermitidos);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);

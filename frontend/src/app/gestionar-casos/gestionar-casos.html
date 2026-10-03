@@ -91,12 +91,12 @@
 
         <div class="filter-item">
           <label for="filtroDesde">Fecha inicial:</label>
-          <input type="date" id="filtroDesde" name="desde" [(ngModel)]="filtroFechaDesde" />
+          <input type="text" id="filtroDesde" name="desde" maxlength="10" placeholder="DD/MM/AAAA" inputmode="numeric" [ngModel]="filtroFechaDesde" (ngModelChange)="filtroFechaDesde = mascaraFecha($event)" />
         </div>
 
         <div class="filter-item">
           <label for="filtroHasta">Fecha final:</label>
-          <input type="date" id="filtroHasta" name="hasta" [(ngModel)]="filtroFechaHasta" />
+          <input type="text" id="filtroHasta" name="hasta" maxlength="10" placeholder="DD/MM/AAAA" inputmode="numeric" [ngModel]="filtroFechaHasta" (ngModelChange)="filtroFechaHasta = mascaraFecha($event)" />
         </div>
 
         <div class="filter-item">

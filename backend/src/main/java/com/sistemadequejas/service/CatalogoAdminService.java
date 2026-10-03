@@ -68,13 +68,13 @@ public class CatalogoAdminService {
         String telefono = texto(request.telefono());
 
         if (nombre.isEmpty() || nombre.length() > 30 || !PATRON_ALFANUMERICO.matcher(nombre).matches()) {
-            throw datosInvalidos("Nombre de la sucursal: obligatorio, alfanumerico, maximo 30 caracteres");
+            throw datosInvalidos("Nombre de la sucursal: obligatorio, alfanumérico, máximo 30 caracteres");
         }
         if (direccion.isEmpty() || direccion.length() > 150) {
-            throw datosInvalidos("Direccion de la sucursal: obligatoria, maximo 150 caracteres");
+            throw datosInvalidos("Dirección de la sucursal: obligatoria, máximo 150 caracteres");
         }
         if (telefono.length() > 20) {
-            throw datosInvalidos("Telefono de la sucursal: maximo 20 caracteres");
+            throw datosInvalidos("Teléfono de la sucursal: máximo 20 caracteres");
         }
         boolean repetido = sucursalRepository.findAll().stream()
                 .anyMatch(s -> s.getNombreSucursal().equalsIgnoreCase(nombre) && !s.getIdSucursal().equals(id));
@@ -105,7 +105,7 @@ public class CatalogoAdminService {
         String codigo = texto(request.codigo()).toUpperCase();
 
         if (nombre.isEmpty() || nombre.length() > 20 || !PATRON_ALFANUMERICO.matcher(nombre).matches()) {
-            throw datosInvalidos("Nombre del tipo de caso: obligatorio, alfanumerico, maximo 20 caracteres");
+            throw datosInvalidos("Nombre del tipo de caso: obligatorio, alfanumérico, máximo 20 caracteres");
         }
         if (!PATRON_PREFIJO.matcher(codigo).matches()) {
             throw datosInvalidos("Prefijo del tipo de caso: exactamente 3 letras");
@@ -138,23 +138,23 @@ public class CatalogoAdminService {
         String codigo = texto(request.codigo()).toUpperCase();
 
         if (nombre.isEmpty() || nombre.length() > 30 || !PATRON_LETRAS.matcher(nombre).matches()) {
-            throw datosInvalidos("Nombre de la categoria: obligatorio, solo letras, maximo 30 caracteres");
+            throw datosInvalidos("Nombre de la categoría: obligatorio, solo letras, máximo 30 caracteres");
         }
         if (!PATRON_PREFIJO.matcher(codigo).matches()) {
-            throw datosInvalidos("Prefijo de la categoria: exactamente 3 letras");
+            throw datosInvalidos("Prefijo de la categoría: exactamente 3 letras");
         }
         boolean repetido = categoriaCasoRepository.findAll().stream()
                 .anyMatch(c -> (c.getNombre().equalsIgnoreCase(nombre) || c.getCodigo().equals(codigo)) && !c.getIdCategoria().equals(id));
         if (repetido) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe una categoria con ese nombre o prefijo");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe una categoría con ese nombre o prefijo");
         }
 
         CategoriaCaso categoria = id == null ? new CategoriaCaso() : categoriaCasoRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoria no encontrada"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoría no encontrada"));
 
         boolean desactivando = id != null && Boolean.TRUE.equals(categoria.getActivo()) && Boolean.FALSE.equals(request.activo());
         if (desactivando) {
-            advertirCasosActivos(casoRepository.countByCategoriaCasoIdCategoriaAndEstadoCasoNombreNotIn(id, CasoService.ESTADOS_FINALES), "la categoria", confirmar);
+            advertirCasosActivos(casoRepository.countByCategoriaCasoIdCategoriaAndEstadoCasoNombreNotIn(id, CasoService.ESTADOS_FINALES), "la categoría", confirmar);
         }
 
         categoria.setNombre(nombre);
@@ -174,7 +174,7 @@ public class CatalogoAdminService {
 
         String nombre = texto(request.nombre());
         if (nombre.isEmpty() || nombre.length() > 25 || !ESTADOS_MAESTROS.contains(nombre)) {
-            throw datosInvalidos("Nombre del estado: debe ser uno del catalogo maestro (" + String.join(", ", ESTADOS_MAESTROS) + ")");
+            throw datosInvalidos("Nombre del estado: debe ser uno del catálogo maestro (" + String.join(", ", ESTADOS_MAESTROS) + ")");
         }
         if (!estado.getNombre().equals(nombre)) {
             throw datosInvalidos("El nombre de un estado del flujo no se puede cambiar");
@@ -183,7 +183,7 @@ public class CatalogoAdminService {
         boolean desactivando = Boolean.TRUE.equals(estado.getActivo()) && Boolean.FALSE.equals(request.activo());
         if (desactivando) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "El estado \"" + estado.getNombre() + "\" forma parte del flujo de atencion y no se puede desactivar");
+                    "El estado \"" + estado.getNombre() + "\" forma parte del flujo de atención y no se puede desactivar");
         }
         if (request.activo() != null) {
             estado.setActivo(request.activo());
@@ -196,12 +196,12 @@ public class CatalogoAdminService {
         if (casosActivos > 0 && !confirmar) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Advertencia: existen " + casosActivos + " caso(s) activo(s) asociados a " + elemento
-                            + ". Confirme la operacion para desactivarlo de todas formas");
+                            + ". Confirme la operación para desactivarlo de todas formas");
         }
     }
 
     private ResponseStatusException datosInvalidos(String detalle) {
-        return new ResponseStatusException(HttpStatus.BAD_REQUEST, "Datos invalidos. Corrija: " + detalle);
+        return new ResponseStatusException(HttpStatus.BAD_REQUEST, "Datos inválidos. Corrija: " + detalle);
     }
 
     private String texto(String valor) {

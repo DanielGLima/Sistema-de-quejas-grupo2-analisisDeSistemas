@@ -14,7 +14,7 @@ export const personalGuard = (...roles: string[]): CanActivateFn => () => {
         localStorage.setItem('rolPersonal', personal.rol.nombre);
         return true;
       }
-      alert('No posee permisos suficientes para realizar esta acción');
+      alert('No posee permisos suficientes para realizar la acción');
       return router.createUrlTree(['/gestionar-casos']);
     }),
     catchError(() => of(router.createUrlTree(['/login'])))

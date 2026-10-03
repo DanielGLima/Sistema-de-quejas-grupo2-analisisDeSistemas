@@ -67,10 +67,10 @@ public class AdminCasoController {
                     "La fecha inicial no puede ser posterior a la fecha final (formato DD/MM/AAAA)");
         }
         if (identificador != null && identificador.length() > 20) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El codigo del caso admite maximo 20 caracteres");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El código del caso admite máximo 20 caracteres");
         }
         if (correoCliente != null && correoCliente.length() > 100) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El correo admite maximo 100 caracteres");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El correo admite máximo 100 caracteres");
         }
 
         return casoService.buscar(
@@ -142,7 +142,7 @@ public class AdminCasoController {
             return texto.contains("/") ? LocalDate.parse(texto.trim(), FORMATO_FECHA) : LocalDate.parse(texto.trim());
         } catch (DateTimeParseException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "La fecha " + etiqueta + " es invalida. Use el formato DD/MM/AAAA");
+                    "La fecha " + etiqueta + " es inválida. Use el formato DD/MM/AAAA");
         }
     }
 }

@@ -31,17 +31,39 @@ public class FileStorageService {
         }
     }
 
-    public String guardar(MultipartFile archivo) {
+    private static final String MENSAJE_ARCHIVO_INVALIDO =
+            "El archivo adjunto supera los 2 MB o no corresponde a un formato permitido (PDF/Imagen)";
+
+    // Valida tamano (max 2 MB), extension (JPG/PNG/PDF) y que el contenido corresponda a ese formato.
+    public String validar(MultipartFile archivo) {
         if (archivo.isEmpty() || archivo.getSize() > TAMANO_MAXIMO_BYTES) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "El archivo adjunto supera los 2 MB o no corresponde a un formato permitido (PDF/Imagen)");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, MENSAJE_ARCHIVO_INVALIDO);
         }
 
         String extension = obtenerExtension(archivo.getOriginalFilename()).toLowerCase();
         if (!TIPOS_PERMITIDOS.contains(extension)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "El archivo adjunto supera los 2 MB o no corresponde a un formato permitido (PDF/Imagen)");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, MENSAJE_ARCHIVO_INVALIDO);
         }
+
+        try (java.io.InputStream entrada = archivo.getInputStream()) {
+            byte[] cabecera = entrada.readNBytes(8);
+            boolean coincide = switch (extension) {
+                case "png" -> cabecera.length >= 4 && (cabecera[0] & 0xFF) == 0x89 && cabecera[1] == 'P' && cabecera[2] == 'N' && cabecera[3] == 'G';
+                case "jpg", "jpeg" -> cabecera.length >= 3 && (cabecera[0] & 0xFF) == 0xFF && (cabecera[1] & 0xFF) == 0xD8 && (cabecera[2] & 0xFF) == 0xFF;
+                case "pdf" -> cabecera.length >= 4 && cabecera[0] == '%' && cabecera[1] == 'P' && cabecera[2] == 'D' && cabecera[3] == 'F';
+                default -> false;
+            };
+            if (!coincide) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, MENSAJE_ARCHIVO_INVALIDO);
+            }
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, MENSAJE_ARCHIVO_INVALIDO);
+        }
+        return extension;
+    }
+
+    public String guardar(MultipartFile archivo) {
+        String extension = validar(archivo);
 
         String nombreArchivo = UUID.randomUUID() + "." + extension;
         Path destino = directorioBase.resolve(nombreArchivo);

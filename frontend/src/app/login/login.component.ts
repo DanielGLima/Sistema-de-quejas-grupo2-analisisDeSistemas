@@ -15,6 +15,7 @@ import { AdminService } from '../services/admin.service';
 export class LoginComponent implements OnInit {
   loginForm!: FormGroup;
   mensajeError: string = '';
+  servicioFueraDeLinea: boolean = false;
 
   constructor(
     private fb: FormBuilder,
@@ -32,6 +33,7 @@ export class LoginComponent implements OnInit {
 
   iniciarSesion(): void {
     this.mensajeError = '';
+    this.servicioFueraDeLinea = false;
 
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
@@ -48,18 +50,41 @@ export class LoginComponent implements OnInit {
         this.router.navigate(['/consultar-casos']);
       },
       error: (err) => {
+        // FA02: portal no disponible
+        if (err.status === 0) {
+          this.mostrarFueraDeLinea();
+          return;
+        }
         const mensajeCliente = err.error?.message ?? 'Correo electrónico o contraseña incorrectos';
         this.intentarComoPersonal(correoElectronico, password, mensajeCliente);
       }
     });
   }
 
+  // FA02 / FA03: el servicio no responde; se informa y se ofrece reintentar (vuelve al paso 1).
+  private mostrarFueraDeLinea(): void {
+    this.servicioFueraDeLinea = true;
+    this.mensajeError = 'El servicio se encuentra temporalmente fuera de línea';
+  }
+
+  reintentar(): void {
+    window.location.reload();
+  }
+
   // El personal interno (Administrador General, Gerente, Operador) usa la misma pantalla de acceso.
   private intentarComoPersonal(correo: string, password: string, mensajeCliente: string): void {
     this.adminService.login(correo, password).subscribe({
-      next: () => this.router.navigate(['/gestionar-casos']),
+      // Paso 6: según el rol, el Administrador General va a su panel de administración (CU-13)
+      // y el Gerente / Operador a la bandeja de gestión y filtrado de casos (CU-10 / CU-12).
+      next: (personal) => this.router.navigate([personal.rol.nombre === 'Administrador General' ? '/administrar' : '/gestionar-casos']),
       // FA05 - Credenciales incorrectas (mismo mensaje genérico, no se revela qué campo falló)
-      error: () => this.mensajeError = mensajeCliente
+      error: (err) => {
+        if (err.status === 0) {
+          this.mostrarFueraDeLinea();
+          return;
+        }
+        this.mensajeError = mensajeCliente;
+      }
     });
   }
 }

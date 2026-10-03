@@ -67,12 +67,12 @@ public class PersonalService {
     // Login del personal interno; mismo mensaje generico que CU-00 FA05.
     public Personal autenticar(String correo, String passwordPlano) {
         Personal personal = personalRepository.findByCorreo(correo)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Correo electronico o contrasena incorrectos"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Correo electrónico o contraseña incorrectos"));
 
         if (!Boolean.TRUE.equals(personal.getActivo())
                 || passwordPlano == null
                 || !passwordEncoder.matches(passwordPlano, personal.getContrasenaHash())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Correo electronico o contrasena incorrectos");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Correo electrónico o contraseña incorrectos");
         }
         return personal;
     }
@@ -81,7 +81,7 @@ public class PersonalService {
     public Personal crear(String nombreCompleto, String correo, Integer idRol, Integer idSucursal, Boolean activo, String passwordTemporal) {
         validarDatos(nombreCompleto, correo);
         if (personalRepository.existsByCorreo(correo)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "El correo electronico ya se encuentra registrado");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El correo electrónico ya se encuentra registrado");
         }
         validarPasswordTemporal(passwordTemporal);
 
@@ -101,7 +101,7 @@ public class PersonalService {
         personalRepository.findByCorreo(correo)
                 .filter(otro -> !otro.getIdPersonal().equals(personal.getIdPersonal()))
                 .ifPresent(otro -> {
-                    throw new ResponseStatusException(HttpStatus.CONFLICT, "El correo electronico ya se encuentra registrado");
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "El correo electrónico ya se encuentra registrado");
                 });
 
         boolean desactivando = Boolean.TRUE.equals(personal.getActivo()) && Boolean.FALSE.equals(activo);
@@ -144,29 +144,29 @@ public class PersonalService {
         if (nombreCompleto == null || nombreCompleto.isBlank() || nombreCompleto.length() > 100
                 || !PATRON_SOLO_LETRAS.matcher(nombreCompleto).matches()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Nombre completo invalido: solo letras, obligatorio y maximo 100 caracteres");
+                    "Nombre completo inválido: solo letras, obligatorio y máximo 100 caracteres");
         }
         if (correo == null || correo.length() > 100 || !PATRON_CORREO.matcher(correo).matches()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Correo electronico invalido: debe tener formato de correo y maximo 100 caracteres");
+                    "Correo electrónico inválido: debe tener formato de correo y máximo 100 caracteres");
         }
     }
 
     private void validarPasswordTemporal(String password) {
         if (password == null || password.length() < 6 || password.length() > 20 || !PATRON_ALFANUMERICO.matcher(password).matches()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Contrasena temporal invalida: alfanumerica, entre 6 y 20 caracteres");
+                    "Contraseña temporal inválida: alfanumérica, entre 6 y 20 caracteres");
         }
     }
 
     private Rol buscarRol(Integer idRol) {
         return rolRepository.findById(idRol == null ? -1 : idRol)
                 .filter(rol -> !Boolean.FALSE.equals(rol.getActivo()))
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe seleccionar un rol valido"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe seleccionar un rol válido"));
     }
 
     private Sucursal buscarSucursal(Integer idSucursal) {
         return sucursalRepository.findById(idSucursal == null ? -1 : idSucursal)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe seleccionar una sucursal valida"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe seleccionar una sucursal válida"));
     }
 }

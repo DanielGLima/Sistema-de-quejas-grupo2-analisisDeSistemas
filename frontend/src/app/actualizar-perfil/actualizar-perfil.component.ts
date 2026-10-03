@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { NavbarComponent } from '../shared/navbar/navbar';
 import { AuthService } from '../services/auth.service';
+import { NACIONALIDADES } from '../core/nacionalidades';
 
 // Mismas reglas que CU-01 (Registrarse).
 const PATRON_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -17,11 +18,11 @@ const PATRON_SOLO_LETRAS = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]+$/;
 })
 export class ActualizarPerfilComponent implements OnInit {
   perfilForm!: FormGroup;
-  mostrarModalConfirmacion: boolean = false;
   mensajeError: string = '';
   mensajeExito: string = '';
   mensajeInfo: string = '';
   cargando: boolean = true;
+  listaNacionalidades: string[] = NACIONALIDADES;
 
   constructor(private fb: FormBuilder, private authService: AuthService) {}
 
@@ -147,30 +148,32 @@ export class ActualizarPerfilComponent implements OnInit {
     return nueva && !actual ? { faltaPasswordActual: true } : null;
   }
 
-  // Paso 4: Botón "Actualizar Datos"
-  solicitarConfirmacion(): void {
+  // Etiquetas exactas de los campos (CU-03, paso 3) para indicar cuál tiene error (FA03).
+  private etiquetas: Record<string, string> = {
+    nombreCompleto: 'nombre completo',
+    fechaNacimiento: 'fecha de nacimiento',
+    nacionalidad: 'nacionalidad',
+    correoElectronico: 'correo electrónico',
+    codigoArea: 'código de área telefónico',
+    telefono: 'número de teléfono',
+    direccion: 'dirección'
+  };
+
+  // Paso 4: botón "Guardar cambios"
+  guardarCambios(): void {
     this.limpiarMensajes();
 
-    // FA01/FA03: Validación de campos obligatorios
+    // Paso 5 / FA03: se indica el campo con error
     if (this.perfilForm.invalid) {
       this.perfilForm.markAllAsTouched();
-      this.mensajeError = this.perfilForm.hasError('faltaPasswordActual')
-        ? 'Debe ingresar su contraseña actual para poder cambiarla'
-        : 'Debe completar todos los campos obligatorios con el formato correcto';
-      return;
-    }
-
-    // Paso 5: Solicita confirmación
-    this.mostrarModalConfirmacion = true;
-  }
-
-  // Pasos 6, 7 / FA02: Confirmación o cancelación
-  confirmarActualizacion(acepta: boolean): void {
-    this.mostrarModalConfirmacion = false;
-
-    if (!acepta) {
-      // FA02: Cancelación de la actualización
-      this.mensajeInfo = 'Se ha cancelado la actualización del perfil';
+      const campoConError = Object.keys(this.etiquetas).find(c => this.perfilForm.get(c)?.invalid);
+      if (campoConError) {
+        this.mensajeError = `Formato de datos no válido. Revise el campo: ${this.etiquetas[campoConError]}`;
+      } else if (this.perfilForm.hasError('faltaPasswordActual')) {
+        this.mensajeError = 'Debe ingresar su contraseña actual para poder cambiarla';
+      } else {
+        this.mensajeError = 'Formato de datos no válido';
+      }
       return;
     }
 
@@ -185,12 +188,13 @@ export class ActualizarPerfilComponent implements OnInit {
       passwordNueva: passwordNueva || undefined
     }).subscribe({
       next: () => {
-        // Paso 7: Actualización exitosa
+        // Pasos 8 y 9: mensaje de éxito y recarga de la información actualizada
         this.mensajeExito = 'Datos actualizados correctamente';
         this.perfilForm.patchValue({ passwordActual: '', passwordNueva: '' });
+        this.cargarPerfil();
       },
       error: (err) => {
-        // FA02 (correo en uso) / contraseña actual incorrecta
+        // FA01 (contraseña actual incorrecta) / FA02 (correo ya registrado) / FA03 (formato de datos)
         this.mensajeError = err.error?.message ?? 'No se pudo actualizar el perfil';
       }
     });

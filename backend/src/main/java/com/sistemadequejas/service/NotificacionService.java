@@ -11,6 +11,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -28,6 +31,9 @@ public class NotificacionService {
     @Autowired
     private EmailService emailService;
 
+    @Autowired
+    private PersonalService personalService;
+
     public List<Notificacion> historial() {
         return notificacionRepository.findTop200ByOrderByFechaEnvioDesc();
     }
@@ -38,6 +44,37 @@ public class NotificacionService {
 
     public void notificarPersonal(Caso caso, Personal personal, String tipoEvento, String asunto, String cuerpo) {
         notificar(caso, null, personal, personal == null ? null : personal.getCorreo(), tipoEvento, asunto, cuerpo);
+    }
+
+    // Paso "notifica al personal administrativo asignado": el responsable del caso; si aun no
+    // tiene, los Administradores Generales y los Gerentes de la sucursal del caso.
+    public void notificarPersonalDelCaso(Caso caso, String tipoEvento, String asunto, String cuerpo) {
+        List<Personal> destinatarios = new ArrayList<>();
+        if (caso.getPersonalAsignado() != null) {
+            destinatarios.add(caso.getPersonalAsignado());
+        } else {
+            for (Personal personal : personalService.findActivos()) {
+                String rol = personal.getRol().getNombre();
+                boolean esAdmin = PersonalService.ROL_ADMINISTRADOR.equals(rol);
+                boolean esGerenteDeLaSucursal = PersonalService.ROL_GERENTE.equals(rol)
+                        && personal.getSucursal() != null
+                        && personal.getSucursal().getIdSucursal().equals(caso.getSucursal().getIdSucursal());
+                if (esAdmin || esGerenteDeLaSucursal) {
+                    destinatarios.add(personal);
+                }
+            }
+        }
+        for (Personal personal : destinatarios) {
+            notificarPersonal(caso, personal, tipoEvento, asunto, cuerpo);
+        }
+    }
+
+    // CU-14 paso 5: el mensaje incluye el codigo del caso y la fecha/hora del evento (DD/MM/AAAA HH:MM:SS), maximo 500.
+    private String armarCuerpo(Caso caso, String cuerpo) {
+        String pie = (caso == null ? "" : " | Caso: " + caso.getIdentificadorVisible())
+                + " | Fecha y hora: " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"));
+        String principal = recortar(cuerpo, 500 - pie.length());
+        return principal + pie;
     }
 
     // Nunca lanza excepcion: la operacion que origino la notificacion continua (FA01/FA02).
@@ -54,7 +91,7 @@ public class NotificacionService {
             notificacion.setPersonal(personal);
             notificacion.setTipoEvento(recortar(tipoEvento, 50));
             notificacion.setAsunto(recortar(asunto, 100));
-            notificacion.setContenido(recortar(cuerpo, 500));
+            notificacion.setContenido(armarCuerpo(caso, cuerpo));
 
             // FA02: sin medio de contacto valido se registra la incidencia y se continua.
             if (correo == null || !PATRON_CORREO.matcher(correo).matches()) {

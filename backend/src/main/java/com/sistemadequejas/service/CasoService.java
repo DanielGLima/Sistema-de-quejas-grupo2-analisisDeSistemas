@@ -109,10 +109,14 @@ public class CasoService {
 
     // CU-07: cancela un caso propio, solo si aun no inicio atencion.
     public Caso cancelar(Caso caso, String motivo) {
+        // Paso 5: motivo opcional, maximo 250 caracteres.
+        if (motivo != null && motivo.length() > 250) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El motivo de cancelación no puede superar los 250 caracteres");
+        }
         String estadoActual = caso.getEstadoCaso().getNombre();
         if (!ESTADOS_CANCELABLES.contains(estadoActual) || caso.getPersonalAsignado() != null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "El caso ya se encuentra en atencion y no puede ser cancelado");
+                    "El caso ya se encuentra en atención y no puede ser cancelado");
         }
 
         EstadoCaso estadoAnterior = caso.getEstadoCaso();
@@ -123,6 +127,12 @@ public class CasoService {
         Caso guardado = casoRepository.save(caso);
 
         historialEstadoCasoService.registrarCambio(guardado, estadoAnterior, estadoCancelado, motivo);
+
+        // Paso 10: notifica al personal administrativo asignado (CU-14).
+        notificacionService.notificarPersonalDelCaso(guardado, "CASO_CANCELADO",
+                "Caso cancelado - " + guardado.getIdentificadorVisible(),
+                "El usuario canceló el caso " + guardado.getIdentificadorVisible()
+                        + (motivo == null || motivo.isBlank() ? "." : ". Motivo: " + motivo.trim()));
         return guardado;
     }
 
@@ -134,11 +144,15 @@ public class CasoService {
         }
         if (caso.getEvaluacion() != null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Este caso ya cuenta con una evaluacion registrada");
+                    "Este caso ya cuenta con una evaluación registrada");
         }
         if (calificacion == null || calificacion < 1 || calificacion > 5) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Debe seleccionar una calificacion para continuar");
+                    "Debe seleccionar una calificación para continuar");
+        }
+
+        if (comentario != null && comentario.length() > 500) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El comentario no puede superar los 500 caracteres");
         }
 
         EvaluacionCaso evaluacion = new EvaluacionCaso();
@@ -191,22 +205,15 @@ public class CasoService {
         // El historial previo se conserva: solo se agrega un nuevo cambio de estado.
         historialEstadoCasoService.registrarCambio(guardado, estadoAnterior, estadoReapertura, "Reapertura solicitada: " + motivoLimpio);
 
-        bitacoraAuditoriaService.registrarAccionUsuarioSobreCaso(usuario, guardado, "Solicitud de reapertura", "CU-09",
-                BitacoraAuditoriaService.json("caso", guardado.getIdentificadorVisible(), "estadoAnterior", estadoAnterior.getNombre(),
-                        "estadoNuevo", estadoReapertura.getNombre(), "motivo", motivoLimpio));
+        bitacoraAuditoriaService.registrarAccionUsuarioSobreCaso(usuario, guardado, "Solicitud de reapertura", "Reapertura de casos",
+                BitacoraAuditoriaService.cambio(
+                        BitacoraAuditoriaService.json("caso", guardado.getIdentificadorVisible(), "estado", estadoAnterior.getNombre()),
+                        BitacoraAuditoriaService.json("caso", guardado.getIdentificadorVisible(), "estado", estadoReapertura.getNombre(), "motivo", motivoLimpio)));
 
         // Paso 9: notifica al personal asignado (o, si no hay, a los Administradores Generales).
         String asunto = "Reapertura solicitada - " + guardado.getIdentificadorVisible();
-        String cuerpo = "El usuario solicito la reapertura del caso " + guardado.getIdentificadorVisible() + ". Motivo: " + motivoLimpio;
-        if (guardado.getPersonalAsignado() != null) {
-            notificacionService.notificarPersonal(guardado, guardado.getPersonalAsignado(), "REAPERTURA_SOLICITADA", asunto, cuerpo);
-        } else {
-            for (Personal personal : personalService.findActivos()) {
-                if (PersonalService.ROL_ADMINISTRADOR.equals(personal.getRol().getNombre())) {
-                    notificacionService.notificarPersonal(guardado, personal, "REAPERTURA_SOLICITADA", asunto, cuerpo);
-                }
-            }
-        }
+        String cuerpo = "El usuario solicitó la reapertura del caso " + guardado.getIdentificadorVisible() + ". Motivo: " + motivoLimpio;
+        notificacionService.notificarPersonalDelCaso(guardado, "REAPERTURA_SOLICITADA", asunto, cuerpo);
         return guardado;
     }
 
@@ -242,7 +249,7 @@ public class CasoService {
         validarVersion(caso, fechaActualizacionVista);
 
         if (nuevoEstado == null || nuevoEstado.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe seleccionar un estado valido");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe seleccionar un estado válido");
         }
         if (notas != null && notas.length() > 500) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Las observaciones no pueden superar los 500 caracteres");
@@ -267,7 +274,7 @@ public class CasoService {
         if (idPersonalAsignado != null) {
             responsableNuevo = personalService.findById(idPersonalAsignado)
                     .filter(p -> Boolean.TRUE.equals(p.getActivo()))
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El empleado responsable seleccionado no es valido"));
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El empleado responsable seleccionado no es válido"));
         }
         boolean cambiaResponsable = responsableNuevo != null
                 && (responsableAnterior == null || !responsableAnterior.getIdPersonal().equals(responsableNuevo.getIdPersonal()));
@@ -282,23 +289,21 @@ public class CasoService {
         historialEstadoCasoService.guardar(historial);
 
         if (cambiaResponsable) {
-            registrarReasignacion(guardado, responsableAnterior, responsableNuevo, actor, "Asignacion desde la gestion del caso");
+            registrarReasignacion(guardado, responsableAnterior, responsableNuevo, actor, "Asignación desde la gestión del caso");
         }
 
-        bitacoraAuditoriaService.registrarAccionPersonal(actor, guardado, "Gestion de caso", "CU-10",
-                BitacoraAuditoriaService.json(
-                        "caso", guardado.getIdentificadorVisible(),
-                        "estadoAnterior", estadoAnterior.getNombre(),
-                        "estadoNuevo", estadoNuevo.getNombre(),
-                        "responsableAnterior", nombreDe(responsableAnterior),
-                        "responsableNuevo", nombreDe(responsableNuevo),
-                        "notas", notas));
+        bitacoraAuditoriaService.registrarAccionPersonal(actor, guardado, "Gestión de caso", "Gestión de casos",
+                BitacoraAuditoriaService.cambio(
+                        BitacoraAuditoriaService.json("caso", guardado.getIdentificadorVisible(),
+                                "estado", estadoAnterior.getNombre(), "responsable", nombreDe(responsableAnterior)),
+                        BitacoraAuditoriaService.json("caso", guardado.getIdentificadorVisible(),
+                                "estado", estadoNuevo.getNombre(), "responsable", nombreDe(responsableNuevo), "notas", notas)));
 
         if (cambiaEstado) {
             notificacionService.notificarUsuario(guardado, guardado.getUsuario(), "CAMBIO_ESTADO",
-                    "Actualizacion de estado - Caso " + guardado.getIdentificadorVisible(),
-                    "Su caso " + guardado.getIdentificadorVisible() + " cambio de estado a \"" + estadoNuevo.getNombre()
-                            + "\". Restaurante Las Delicias esta dando seguimiento a su caso.");
+                    "Actualización de estado - Caso " + guardado.getIdentificadorVisible(),
+                    "Su caso " + guardado.getIdentificadorVisible() + " cambió de estado a \"" + estadoNuevo.getNombre()
+                            + "\". Restaurante Las Delicias está dando seguimiento a su caso.");
         }
         if (cambiaResponsable) {
             avisarAsignacion(guardado, responsableNuevo);
@@ -315,7 +320,7 @@ public class CasoService {
         if (anterior == null || ESTADOS_FINALES.contains(caso.getEstadoCaso().getNombre())
                 || "Resuelto".equals(caso.getEstadoCaso().getNombre())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Solo se puede reasignar un caso asignado que no este Resuelto ni Cerrado");
+                    "Solo se puede reasignar un caso asignado que no esté Resuelto ni Cerrado");
         }
         if (idPersonalNuevo == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe seleccionar un nuevo empleado responsable");
@@ -323,11 +328,11 @@ public class CasoService {
         String motivoLimpio = motivo == null ? "" : motivo.trim();
         if (motivoLimpio.length() < 10 || motivoLimpio.length() > 300) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Debe ingresar el motivo de la reasignacion (minimo 10 y maximo 300 caracteres)");
+                    "Debe ingresar el motivo de la reasignación (mínimo 10 y máximo 300 caracteres)");
         }
         Personal nuevo = personalService.findById(idPersonalNuevo)
                 .filter(p -> Boolean.TRUE.equals(p.getActivo()))
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El empleado responsable seleccionado no es valido"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El empleado responsable seleccionado no es válido"));
         if (nuevo.getIdPersonal().equals(anterior.getIdPersonal())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El nuevo responsable debe ser distinto al actual");
         }
@@ -338,9 +343,10 @@ public class CasoService {
 
         registrarReasignacion(guardado, anterior, nuevo, actor, motivoLimpio);
 
-        bitacoraAuditoriaService.registrarAccionPersonal(actor, guardado, "Reasignacion de caso", "CU-10",
-                BitacoraAuditoriaService.json("caso", guardado.getIdentificadorVisible(),
-                        "responsableAnterior", nombreDe(anterior), "responsableNuevo", nombreDe(nuevo), "motivo", motivoLimpio));
+        bitacoraAuditoriaService.registrarAccionPersonal(actor, guardado, "Reasignación de caso", "Gestión de casos",
+                BitacoraAuditoriaService.cambio(
+                        BitacoraAuditoriaService.json("caso", guardado.getIdentificadorVisible(), "responsable", nombreDe(anterior)),
+                        BitacoraAuditoriaService.json("caso", guardado.getIdentificadorVisible(), "responsable", nombreDe(nuevo), "motivo", motivoLimpio)));
         avisarAsignacion(guardado, nuevo);
         return guardado;
     }
@@ -357,8 +363,8 @@ public class CasoService {
 
     private void avisarAsignacion(Caso caso, Personal responsable) {
         notificacionService.notificarPersonal(caso, responsable, "REASIGNACION",
-                "Asignacion de caso - " + caso.getIdentificadorVisible(),
-                "Se le asigno la gestion del caso " + caso.getIdentificadorVisible() + " para su atencion y resolucion.");
+                "Asignación de caso - " + caso.getIdentificadorVisible(),
+                "Se le asignó la gestión del caso " + caso.getIdentificadorVisible() + " para su atención y resolución.");
     }
 
     // FA03: el caso fue modificado por otra persona desde que se cargo la pantalla.
@@ -369,7 +375,7 @@ public class CasoService {
         LocalDateTime actual = caso.getFechaActualizacion().truncatedTo(ChronoUnit.MILLIS);
         if (!actual.equals(fechaVista.truncatedTo(ChronoUnit.MILLIS))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "El caso fue actualizado por otro usuario. Recargue la informacion antes de realizar nuevos cambios");
+                    "El caso fue actualizado por otro usuario. Recargue la información antes de realizar nuevos cambios");
         }
     }
 
@@ -382,7 +388,7 @@ public class CasoService {
         // FA03: solo casos "En Proceso".
         if (!"En Proceso".equals(caso.getEstadoCaso().getNombre())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "El caso debe encontrarse en estado En Proceso para poder responder");
+                    "El caso debe encontrarse en un estado válido para poder responder");
         }
         if (caso.getPersonalAsignado() == null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El caso debe estar asignado a un responsable para poder responder");
@@ -395,17 +401,17 @@ public class CasoService {
         // FA02: informacion insuficiente, indicando los datos faltantes.
         List<String> faltantes = new ArrayList<>();
         if (titulo == null || titulo.isBlank() || titulo.length() > 100) {
-            faltantes.add("titulo o resumen (maximo 100 caracteres)");
+            faltantes.add("título o resumen (máximo 100 caracteres)");
         }
         if (cuerpo == null || cuerpo.trim().length() < 20 || cuerpo.length() > 1000) {
             faltantes.add("cuerpo de la respuesta (entre 20 y 1000 caracteres)");
         }
         if (acciones != null && acciones.length() > 300) {
-            faltantes.add("acciones de compensacion/seguimiento (maximo 300 caracteres)");
+            faltantes.add("acciones de compensación/seguimiento (máximo 300 caracteres)");
         }
         if (!faltantes.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Debe completar la informacion requerida: " + String.join("; ", faltantes));
+                    "Debe completar la información requerida: " + String.join("; ", faltantes));
         }
 
         RespuestaCaso respuesta = new RespuestaCaso();
@@ -419,8 +425,9 @@ public class CasoService {
         if (esOperador) {
             respuesta.setEstadoAprobacion(RespuestaCaso.PENDIENTE_APROBACION);
             RespuestaCaso guardada = respuestaCasoRepository.save(respuesta);
-            bitacoraAuditoriaService.registrarAccionPersonal(actor, caso, "Respuesta pendiente de aprobacion", "CU-11",
-                    BitacoraAuditoriaService.json("caso", caso.getIdentificadorVisible(), "titulo", guardada.getTitulo()));
+            bitacoraAuditoriaService.registrarAccionPersonal(actor, caso, "Respuesta pendiente de aprobación", "Respuesta de casos",
+                    BitacoraAuditoriaService.cambio("{}", BitacoraAuditoriaService.json(
+                            "caso", caso.getIdentificadorVisible(), "titulo", guardada.getTitulo(), "estadoRespuesta", RespuestaCaso.PENDIENTE_APROBACION)));
             return guardada;
         }
 
@@ -434,11 +441,11 @@ public class CasoService {
         validarAlcance(actor, caso);
 
         if (!RespuestaCaso.PENDIENTE_APROBACION.equals(respuesta.getEstadoAprobacion())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "La respuesta no esta pendiente de aprobacion");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "La respuesta no está pendiente de aprobación");
         }
         if (!"En Proceso".equals(caso.getEstadoCaso().getNombre())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "El caso debe encontrarse en estado En Proceso para poder responder");
+                    "El caso debe encontrarse en un estado válido para poder responder");
         }
 
         respuesta.setEstadoAprobacion(RespuestaCaso.APROBADA);
@@ -459,14 +466,15 @@ public class CasoService {
         historial.setIdPersonal(actor.getIdPersonal());
         historialEstadoCasoService.guardar(historial);
 
-        bitacoraAuditoriaService.registrarAccionPersonal(actor, guardado, "Respuesta oficial", "CU-11",
-                BitacoraAuditoriaService.json("caso", guardado.getIdentificadorVisible(),
-                        "estadoAnterior", anterior.getNombre(), "estadoNuevo", resuelto.getNombre(),
-                        "titulo", respuesta.getTitulo(), "compensacion", respuesta.getAccionesSeguimiento()));
+        bitacoraAuditoriaService.registrarAccionPersonal(actor, guardado, "Respuesta oficial", "Respuesta de casos",
+                BitacoraAuditoriaService.cambio(
+                        BitacoraAuditoriaService.json("caso", guardado.getIdentificadorVisible(), "estado", anterior.getNombre()),
+                        BitacoraAuditoriaService.json("caso", guardado.getIdentificadorVisible(), "estado", resuelto.getNombre(),
+                                "titulo", respuesta.getTitulo(), "compensacion", respuesta.getAccionesSeguimiento())));
 
         notificacionService.notificarUsuario(guardado, guardado.getUsuario(), "RESPUESTA_OFICIAL",
                 "Respuesta oficial - Caso " + guardado.getIdentificadorVisible(),
-                "Se emitio una respuesta oficial sobre su caso " + guardado.getIdentificadorVisible() + ": \""
+                "Se emitió una respuesta oficial sobre su caso " + guardado.getIdentificadorVisible() + ": \""
                         + respuesta.getTitulo() + "\". Ingrese al portal para ver los detalles.");
     }
 
@@ -553,7 +561,7 @@ public class CasoService {
 
     private EstadoCaso estadoPorNombre(String nombre) {
         return estadoCasoService.findByNombre(nombre)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El estado indicado no existe en el catalogo"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El estado indicado no existe en el catálogo"));
     }
 
     private String nombreDe(Personal personal) {

@@ -4,10 +4,12 @@
       <div class="logo-icon">🍽️</div>
       <h2>Restaurante Las Delicias</h2>
       <p class="subtitle">Sistema de Quejas</p>
+      <p class="info-servicio">Registre y dé seguimiento a sus quejas, reclamos, denuncias y sugerencias sobre la atención en nuestras sucursales. Portal disponible las 24 horas.</p>
     </div>
 
     <div *ngIf="mensajeError" class="alert alert-danger">
       <span>⚠️ {{ mensajeError }}</span>
+      <button *ngIf="servicioFueraDeLinea" type="button" class="btn-reintentar" (click)="reintentar()">Reintentar</button>
     </div>
 
     <form [formGroup]="loginForm" (ngSubmit)="iniciarSesion()">

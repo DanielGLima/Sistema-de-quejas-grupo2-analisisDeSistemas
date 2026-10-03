@@ -10,11 +10,15 @@
       <span>⚠️ {{ mensajeError }}</span>
     </div>
 
+    <div *ngIf="mensajeExito" class="alert alert-success">
+      <span>✅ {{ mensajeExito }}</span>
+    </div>
+
     <div *ngIf="mensajeInfo" class="alert alert-info">
       <span>ℹ️ {{ mensajeInfo }}</span>
     </div>
 
-    <form [formGroup]="casoForm" (ngSubmit)="solicitarConfirmacion()">
+    <form [formGroup]="casoForm" (ngSubmit)="registrarCaso()">
       <!-- tipo de caso -->
       <div class="form-group">
         <label for="idTipoCaso">tipo de caso</label>
@@ -62,6 +66,7 @@
             type="text"
             maxlength="100"
             formControlName="nombreEmpleadoInvolucrado"
+            (input)="soloTexto($event)"
           />
         </div>
       </div>
@@ -79,10 +84,10 @@
       </div>
 
       <!-- denuncia anónima -->
-      <div class="form-group form-check">
+      <div class="form-group form-check" *ngIf="esDenuncia">
         <label>
           <input type="checkbox" formControlName="esAnonimo" />
-          Registrar como anónimo (aplica principalmente a Denuncias)
+          Registrar como denuncia anónima (se ocultarán mis datos personales)
         </label>
       </div>
 
@@ -101,21 +106,10 @@
         </small>
       </div>
 
-      <button type="submit" class="btn btn-primary">
-        Registrar Caso
+      <button type="submit" class="btn btn-primary" [disabled]="registrando">
+        Registrar caso
       </button>
     </form>
 
-    <!-- Modal de confirmación -->
-    <div *ngIf="mostrarModalConfirmacion" class="modal-backdrop">
-      <div class="modal-card">
-        <h3>Confirmación</h3>
-        <p>¿Está seguro de proceder con el registro de este caso?</p>
-        <div class="modal-buttons">
-          <button type="button" class="btn btn-primary" (click)="confirmarRegistro(true)">Sí</button>
-          <button type="button" class="btn btn-secondary" (click)="confirmarRegistro(false)">No</button>
-        </div>
-      </div>
-    </div>
   </div>
 </div>

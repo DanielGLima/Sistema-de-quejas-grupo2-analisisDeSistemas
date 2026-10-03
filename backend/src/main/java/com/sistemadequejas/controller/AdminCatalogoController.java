@@ -20,7 +20,7 @@ import java.util.List;
 @RequestMapping("/api/admin/catalogos")
 public class AdminCatalogoController {
 
-    private static final String MODULO = "CU-13";
+    private static final String MODULO = "Administración de catálogos";
 
     @Autowired
     private CatalogoAdminService catalogoAdminService;
@@ -51,7 +51,7 @@ public class AdminCatalogoController {
     public ResponseEntity<Sucursal> crearSucursal(@RequestBody CatalogoRequest request, HttpSession session) {
         Personal actor = admin(session);
         Sucursal guardada = catalogoAdminService.guardarSucursal(null, request, false);
-        auditar(actor, "Alta de sucursal", BitacoraAuditoriaService.json("nombre", guardada.getNombreSucursal()));
+        auditar(actor, "Alta de sucursal", "{}", BitacoraAuditoriaService.json("nombre", guardada.getNombreSucursal(), "dirección", guardada.getDireccionSucursal()));
         return ResponseEntity.status(HttpStatus.CREATED).body(guardada);
     }
 
@@ -59,9 +59,12 @@ public class AdminCatalogoController {
     public Sucursal actualizarSucursal(@PathVariable Integer id, @RequestBody CatalogoRequest request,
                                        @RequestParam(defaultValue = "false") boolean confirmar, HttpSession session) {
         Personal actor = admin(session);
+        String anterior = catalogoAdminService.sucursales().stream().filter(x -> x.getIdSucursal().equals(id)).findFirst()
+                .map(x -> BitacoraAuditoriaService.json("nombre", x.getNombreSucursal(), "dirección", x.getDireccionSucursal(), "situación", estadoCuenta(x.isActivo())))
+                .orElse("{}");
         Sucursal guardada = catalogoAdminService.guardarSucursal(id, request, confirmar);
-        auditar(actor, "Modificacion de sucursal", BitacoraAuditoriaService.json("nombre", guardada.getNombreSucursal(),
-                "activo", String.valueOf(guardada.isActivo())));
+        auditar(actor, "Modificación de sucursal", anterior, BitacoraAuditoriaService.json("nombre", guardada.getNombreSucursal(),
+                "dirección", guardada.getDireccionSucursal(), "situación", estadoCuenta(guardada.isActivo())));
         return guardada;
     }
 
@@ -76,7 +79,7 @@ public class AdminCatalogoController {
     public ResponseEntity<TipoCaso> crearTipoCaso(@RequestBody CatalogoRequest request, HttpSession session) {
         Personal actor = admin(session);
         TipoCaso guardado = catalogoAdminService.guardarTipoCaso(null, request, false);
-        auditar(actor, "Alta de tipo de caso", BitacoraAuditoriaService.json("nombre", guardado.getNombre(), "prefijo", guardado.getCodigo()));
+        auditar(actor, "Alta de tipo de caso", "{}", BitacoraAuditoriaService.json("nombre", guardado.getNombre(), "prefijo", guardado.getCodigo()));
         return ResponseEntity.status(HttpStatus.CREATED).body(guardado);
     }
 
@@ -84,9 +87,12 @@ public class AdminCatalogoController {
     public TipoCaso actualizarTipoCaso(@PathVariable Integer id, @RequestBody CatalogoRequest request,
                                        @RequestParam(defaultValue = "false") boolean confirmar, HttpSession session) {
         Personal actor = admin(session);
+        String anterior = catalogoAdminService.tiposCaso().stream().filter(x -> x.getIdTipoCaso().equals(id)).findFirst()
+                .map(x -> BitacoraAuditoriaService.json("nombre", x.getNombre(), "prefijo", x.getCodigo(), "situación", estadoCuenta(Boolean.TRUE.equals(x.getActivo()))))
+                .orElse("{}");
         TipoCaso guardado = catalogoAdminService.guardarTipoCaso(id, request, confirmar);
-        auditar(actor, "Modificacion de tipo de caso", BitacoraAuditoriaService.json("nombre", guardado.getNombre(),
-                "activo", String.valueOf(guardado.getActivo())));
+        auditar(actor, "Modificación de tipo de caso", anterior, BitacoraAuditoriaService.json("nombre", guardado.getNombre(),
+                "prefijo", guardado.getCodigo(), "situación", estadoCuenta(Boolean.TRUE.equals(guardado.getActivo()))));
         return guardado;
     }
 
@@ -101,7 +107,7 @@ public class AdminCatalogoController {
     public ResponseEntity<CategoriaCaso> crearCategoria(@RequestBody CatalogoRequest request, HttpSession session) {
         Personal actor = admin(session);
         CategoriaCaso guardada = catalogoAdminService.guardarCategoria(null, request, false);
-        auditar(actor, "Alta de categoria", BitacoraAuditoriaService.json("nombre", guardada.getNombre(), "prefijo", guardada.getCodigo()));
+        auditar(actor, "Alta de categoría", "{}", BitacoraAuditoriaService.json("nombre", guardada.getNombre(), "prefijo", guardada.getCodigo()));
         return ResponseEntity.status(HttpStatus.CREATED).body(guardada);
     }
 
@@ -109,9 +115,12 @@ public class AdminCatalogoController {
     public CategoriaCaso actualizarCategoria(@PathVariable Integer id, @RequestBody CatalogoRequest request,
                                              @RequestParam(defaultValue = "false") boolean confirmar, HttpSession session) {
         Personal actor = admin(session);
+        String anterior = catalogoAdminService.categorias().stream().filter(x -> x.getIdCategoria().equals(id)).findFirst()
+                .map(x -> BitacoraAuditoriaService.json("nombre", x.getNombre(), "prefijo", x.getCodigo(), "situación", estadoCuenta(Boolean.TRUE.equals(x.getActivo()))))
+                .orElse("{}");
         CategoriaCaso guardada = catalogoAdminService.guardarCategoria(id, request, confirmar);
-        auditar(actor, "Modificacion de categoria", BitacoraAuditoriaService.json("nombre", guardada.getNombre(),
-                "activo", String.valueOf(guardada.getActivo())));
+        auditar(actor, "Modificación de categoría", anterior, BitacoraAuditoriaService.json("nombre", guardada.getNombre(),
+                "prefijo", guardada.getCodigo(), "situación", estadoCuenta(Boolean.TRUE.equals(guardada.getActivo()))));
         return guardada;
     }
 
@@ -126,9 +135,12 @@ public class AdminCatalogoController {
     public EstadoCaso actualizarEstado(@PathVariable Integer id, @RequestBody CatalogoRequest request,
                                        @RequestParam(defaultValue = "false") boolean confirmar, HttpSession session) {
         Personal actor = admin(session);
+        String anterior = catalogoAdminService.estados().stream().filter(x -> x.getIdEstado().equals(id)).findFirst()
+                .map(x -> BitacoraAuditoriaService.json("nombre", x.getNombre(), "situación", estadoCuenta(Boolean.TRUE.equals(x.getActivo()))))
+                .orElse("{}");
         EstadoCaso guardado = catalogoAdminService.guardarEstado(id, request, confirmar);
-        auditar(actor, "Modificacion de estado", BitacoraAuditoriaService.json("nombre", guardado.getNombre(),
-                "activo", String.valueOf(guardado.getActivo())));
+        auditar(actor, "Modificación de estado", anterior, BitacoraAuditoriaService.json("nombre", guardado.getNombre(),
+                "situación", estadoCuenta(Boolean.TRUE.equals(guardado.getActivo()))));
         return guardado;
     }
 
@@ -136,7 +148,11 @@ public class AdminCatalogoController {
         return sesionPersonal.requerirRol(session, PersonalService.ROL_ADMINISTRADOR);
     }
 
-    private void auditar(Personal actor, String accion, String detalle) {
-        bitacoraAuditoriaService.registrarAccionPersonal(actor, null, accion, MODULO, detalle);
+    private void auditar(Personal actor, String accion, String anterior, String nuevo) {
+        bitacoraAuditoriaService.registrarAccionPersonal(actor, null, accion, MODULO, BitacoraAuditoriaService.cambio(anterior, nuevo));
+    }
+
+    private String estadoCuenta(boolean activo) {
+        return activo ? "Activo" : "Inactivo";
     }
 }

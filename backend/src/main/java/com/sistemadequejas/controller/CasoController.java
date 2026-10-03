@@ -55,8 +55,10 @@ public class CasoController {
     @Autowired
     private NotificacionService notificacionService;
 
-    // FA02: formato alfanumerico simple (letras, numeros y guiones).
-    private static final java.util.regex.Pattern PATRON_FACTURA = java.util.regex.Pattern.compile("^[A-Za-z0-9-]+$");
+    // FA02: numero de factura alfanumerico (letras y numeros), maximo 20 caracteres.
+    private static final java.util.regex.Pattern PATRON_FACTURA = java.util.regex.Pattern.compile("^[A-Za-z0-9]{1,20}$");
+    // Nombre del empleado involucrado: texto alfabetico, maximo 100 caracteres.
+    private static final java.util.regex.Pattern PATRON_NOMBRE = java.util.regex.Pattern.compile("^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]{1,100}$");
 
     // CU-06 (soporte minimo): lista los casos del usuario autenticado.
     @GetMapping("/mios")
@@ -98,14 +100,24 @@ public class CasoController {
         Usuario usuario = usuarioAutenticado(session);
 
         // FA01: campos obligatorios (categoria del servicio, descripcion 10-1000 caracteres, al menos una evidencia).
-        if (descripcion == null || descripcion.trim().length() < 10 || archivos == null || archivos.isEmpty()) {
+        if (descripcion == null || descripcion.trim().length() < 10 || descripcion.length() > 1000
+                || archivos == null || archivos.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe ingresar los campos obligatorios");
         }
 
         // FA02: formato de numero de factura (campo opcional).
         if (numeroFactura != null && !numeroFactura.isBlank() && !PATRON_FACTURA.matcher(numeroFactura).matches()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El formato de la factura es invalido");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El formato de la factura es inválido");
         }
+
+        if (nombreEmpleadoInvolucrado != null && !nombreEmpleadoInvolucrado.isBlank()
+                && !PATRON_NOMBRE.matcher(nombreEmpleadoInvolucrado).matches()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "El nombre del empleado involucrado solo puede contener letras (máximo 100 caracteres)");
+        }
+
+        // FA03: se validan TODOS los archivos antes de registrar nada (si uno falla, no se crea el caso).
+        archivos.forEach(fileStorageService::validar);
 
         TipoCaso tipoCaso = tipoCasoService.findById(idTipoCaso)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe ingresar los campos obligatorios"));
@@ -125,7 +137,8 @@ public class CasoController {
         caso.setDescripcion(descripcion);
         caso.setNumeroFactura(numeroFactura);
         caso.setNombreEmpleadoInvolucrado(nombreEmpleadoInvolucrado);
-        caso.setEsAnonimo(esAnonimo);
+        // FA04: la denuncia anonima solo aplica al tipo Denuncia.
+        caso.setEsAnonimo(esAnonimo && "Denuncia".equals(tipoCaso.getNombre()));
 
         Caso guardado = casoService.registrarCaso(caso);
 
@@ -146,12 +159,20 @@ public class CasoController {
                 usuario,
                 "REGISTRO_CASO",
                 "Caso registrado - " + guardado.getIdentificadorVisible(),
-                "Tu caso fue registrado exitosamente. Numero de seguimiento: " + guardado.getIdentificadorVisible()
+                "Tu caso fue registrado exitosamente. Número de seguimiento: " + guardado.getIdentificadorVisible()
                         + ". Puedes consultar su estado desde 'Mis casos' en el Sistema de Quejas."
         );
 
-        bitacoraAuditoriaService.registrarAccionUsuarioSobreCaso(usuario, guardado, "Registro de caso", "CU-05",
-                "Caso " + guardado.getIdentificadorVisible() + " creado en estado Nuevo");
+        // Paso 8: notifica al personal administrativo (CU-14).
+        notificacionService.notificarPersonalDelCaso(guardado, "CASO_NUEVO",
+                "Nuevo caso registrado - " + guardado.getIdentificadorVisible(),
+                "Se registró un nuevo caso " + guardado.getIdentificadorVisible() + " (" + tipoCaso.getNombre()
+                        + ") en la sucursal " + sucursal.getNombreSucursal() + ".");
+
+        bitacoraAuditoriaService.registrarAccionUsuarioSobreCaso(usuario, guardado, "Registro de caso", "Registro de casos",
+                BitacoraAuditoriaService.cambio("{}", BitacoraAuditoriaService.json(
+                        "caso", guardado.getIdentificadorVisible(), "tipo", tipoCaso.getNombre(),
+                        "sucursal", sucursal.getNombreSucursal(), "estado", "Nuevo")));
 
         return ResponseEntity.status(HttpStatus.CREATED).body(guardado);
     }
@@ -161,11 +182,15 @@ public class CasoController {
     public ResponseEntity<Caso> cancelar(@PathVariable Integer id, @RequestBody CancelarCasoRequest request, HttpSession session) {
         Usuario usuario = usuarioAutenticado(session);
         Caso caso = casoPropio(id, usuario);
+        String estadoAntes = caso.getEstadoCaso().getNombre();
         Caso cancelado = casoService.cancelar(caso, request.getMotivo());
 
         // CU-15: el cambio de estado queda en la bitacora de auditoria.
-        bitacoraAuditoriaService.registrarAccionUsuarioSobreCaso(usuario, cancelado, "Cancelacion de caso", "CU-07",
-                "Caso " + cancelado.getIdentificadorVisible() + " cancelado por el usuario. Motivo: " + request.getMotivo());
+        bitacoraAuditoriaService.registrarAccionUsuarioSobreCaso(usuario, cancelado, "Cancelación de caso", "Cancelación de casos",
+                BitacoraAuditoriaService.cambio(
+                        BitacoraAuditoriaService.json("caso", cancelado.getIdentificadorVisible(), "estado", estadoAntes),
+                        BitacoraAuditoriaService.json("caso", cancelado.getIdentificadorVisible(), "estado", cancelado.getEstadoCaso().getNombre(),
+                                "motivo", request.getMotivo())));
 
         return ResponseEntity.ok(cancelado);
     }
@@ -176,8 +201,9 @@ public class CasoController {
         Usuario usuario = usuarioAutenticado(session);
         Caso caso = casoPropio(id, usuario);
         EvaluacionCaso evaluacion = casoService.evaluar(caso, request.getCalificacion(), request.getComentario());
-        bitacoraAuditoriaService.registrarAccionUsuarioSobreCaso(usuario, caso, "Evaluacion de atencion", "CU-08",
-                BitacoraAuditoriaService.json("caso", caso.getIdentificadorVisible(), "calificacion", String.valueOf(request.getCalificacion())));
+        bitacoraAuditoriaService.registrarAccionUsuarioSobreCaso(usuario, caso, "Evaluación de atención", "Evaluación de casos",
+                BitacoraAuditoriaService.cambio("{}", BitacoraAuditoriaService.json(
+                        "caso", caso.getIdentificadorVisible(), "calificación", String.valueOf(request.getCalificacion()))));
         return ResponseEntity.status(HttpStatus.CREATED).body(evaluacion);
     }
 
@@ -205,9 +231,9 @@ public class CasoController {
     private Usuario usuarioAutenticado(HttpSession session) {
         Object idUsuario = session.getAttribute(SESSION_ID_USUARIO);
         if (idUsuario == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Debe iniciar sesion");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Debe iniciar sesión");
         }
         return usuarioService.findById((Integer) idUsuario)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Debe iniciar sesion"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Debe iniciar sesión"));
     }
 }

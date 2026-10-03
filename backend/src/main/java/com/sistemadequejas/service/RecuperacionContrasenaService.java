@@ -38,17 +38,21 @@ public class RecuperacionContrasenaService {
         return recuperacionContrasenaRepository.save(recuperacion);
     }
 
-    // CU-02: valida el codigo ingresado y lo marca como usado.
+    // CU-02: valida el codigo ingresado (sin consumirlo).
     // FA05 (codigo incorrecto) y FA06 (codigo expirado) son mensajes distintos.
-    public void validarYConsumirCodigo(Usuario usuario, String codigo) {
+    public RecuperacionContrasena validarCodigo(Usuario usuario, String codigo) {
         RecuperacionContrasena recuperacion = recuperacionContrasenaRepository
-                .findFirstByUsuarioAndCodigoTokenAndUsadoFalseOrderByFechaCreacionDesc(usuario, codigo)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El codigo de recuperacion ingresado es incorrecto"));
+                .findFirstByUsuarioAndCodigoTokenAndUsadoFalseOrderByFechaCreacionDesc(usuario, codigo == null ? "" : codigo)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El código de recuperación ingresado es incorrecto"));
 
         if (recuperacion.getFechaExpiracion().isBefore(LocalDateTime.now())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El codigo de recuperacion ha expirado. Solicite uno nuevo");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El código de recuperación ha expirado. Solicite uno nuevo");
         }
+        return recuperacion;
+    }
 
+    // Marca el codigo como usado una vez que la contrasena fue restablecida.
+    public void consumir(RecuperacionContrasena recuperacion) {
         recuperacion.setUsado(true);
         recuperacionContrasenaRepository.save(recuperacion);
     }

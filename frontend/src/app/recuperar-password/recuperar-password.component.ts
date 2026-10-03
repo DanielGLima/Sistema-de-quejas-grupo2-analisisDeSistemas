@@ -29,12 +29,12 @@ export class RecuperarPasswordComponent implements OnInit {
   ngOnInit(): void {
     // Paso 3: correo electrónico (alfanumérico / formato email, hasta 100 caracteres)
     this.correoForm = this.fb.group({
-      correoElectronico: ['', [Validators.required, Validators.email, Validators.maxLength(100)]]
+      correoElectronico: ['', [Validators.required, Validators.pattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/), Validators.maxLength(100)]]
     });
 
     // Pasos 6 y 7: código de recuperación (6 caracteres), nueva contraseña y confirmación
     this.validacionForm = this.fb.group({
-      codigoRecuperacion: ['', [Validators.required, Validators.maxLength(6)]],
+      codigoRecuperacion: ['', [Validators.required, Validators.maxLength(6), Validators.pattern(/^[A-Za-z0-9]+$/)]],
       nuevaPassword: ['', [Validators.required, Validators.maxLength(20)]],
       confirmacionPassword: ['', [Validators.required, Validators.maxLength(20)]]
     });
@@ -89,7 +89,7 @@ export class RecuperarPasswordComponent implements OnInit {
 
     // FA05: Código de recuperación no válido o incorrecto
     if (codigo.length !== 6) {
-      this.mensajeError = 'El código ingresado es incorrecto';
+      this.mensajeError = 'El código de recuperación ingresado es incorrecto';
       return;
     }
 
@@ -130,8 +130,12 @@ export class RecuperarPasswordComponent implements OnInit {
         }, 2000);
       },
       error: (err) => {
-        // FA02: código o enlace expirado
-        this.mensajeError = err.error?.message ?? 'El código es incorrecto  ';
+        // FA05: código incorrecto (se queda en el paso 6) / FA06: código expirado (retorna al paso 3)
+        this.mensajeError = err.error?.message ?? 'El código de recuperación ingresado es incorrecto';
+        if (this.mensajeError.includes('ha expirado')) {
+          this.faseCodigoEnviado = false;
+          this.validacionForm.reset();
+        }
       }
     });
   }

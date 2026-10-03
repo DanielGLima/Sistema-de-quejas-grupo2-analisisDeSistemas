@@ -1,8 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { NavbarComponent } from '../shared/navbar/navbar';
 import { CasoService } from '../services/caso.service';
+import { BACKEND_BASE_URL } from '../core/api-config';
 
 // Forma "aplanada" que usa esta pantalla, distinta del modelo que devuelve la API
 // (que trae objetos anidados para tipoCaso/sucursal/estadoCaso).
@@ -32,6 +34,9 @@ export interface Caso {
   respuesta?: string;
   archivoEvidencia?: string;
   motivoCancelacion?: string;
+  asignado?: boolean;
+  evidencias?: { nombre: string; url: string }[];
+  historial?: { estado: string; fecha: string; observacion?: string }[];
   evaluacion?: EvaluacionCaso;
   reapertura?: SolicitudReapertura;
 }
@@ -39,7 +44,7 @@ export interface Caso {
 @Component({
   selector: 'app-consultar-casos',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NavbarComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, NavbarComponent],
   templateUrl: './consultar-casos.component.html',
   styleUrls: ['./consultar-casos.component.scss']
 })
@@ -56,6 +61,10 @@ export class ConsultarCasosComponent implements OnInit {
 
   casoSeleccionado: Caso | null = null;
   mostrarModalDetalle: boolean = false;
+
+  // Avisos de las acciones del usuario (CU-07)
+  mensajeAccion: string = '';
+  errorAccion: string = '';
 
   // Variables CU-07
   mostrarModalCancelar: boolean = false;
@@ -104,6 +113,7 @@ export class ConsultarCasosComponent implements OnInit {
         fechaCreacion: c.fechaCreacion,
         estado: c.estadoCaso.nombre,
         detalle: c.descripcion,
+        asignado: !!c.personalAsignado,
         evaluacion: c.evaluacion ? {
           calificacion: c.evaluacion.calificacion,
           comentarios: c.evaluacion.comentario,
@@ -150,6 +160,15 @@ export class ConsultarCasosComponent implements OnInit {
           caso.respuesta = aprobada.titulo + '\n' + aprobada.contenido
             + (aprobada.accionesSeguimiento ? '\nCompensación / seguimiento: ' + aprobada.accionesSeguimiento : '');
         }
+        caso.evidencias = detalle.evidencias.map(e => ({
+          nombre: e.urlArchivo.substring(e.urlArchivo.lastIndexOf('/') + 1),
+          url: BACKEND_BASE_URL + e.urlArchivo
+        }));
+        caso.historial = detalle.historial.map(h => ({
+          estado: h.estadoNuevo.nombre,
+          fecha: h.fechaCambio,
+          observacion: h.observacion
+        }));
         const cierre = detalle.historial.find(h => h.estadoNuevo.nombre === 'Cerrado');
         if (cierre) {
           caso.fechaCierre = cierre.fechaCambio;
@@ -165,14 +184,29 @@ export class ConsultarCasosComponent implements OnInit {
     this.mostrarModalDetalle = false;
   }
 
-  // Regla CU-07: solo en estado "Nuevo" o "En espera" (catalogo real de estado_caso)
+  // Regla CU-07: solo se cancela en estado "Nuevo" o "En espera" y sin atención asignada.
   puedeCancelar(caso: Caso): boolean {
     const estado = caso.estado?.toLowerCase();
-    return estado === 'nuevo' || estado === 'en espera';
+    return (estado === 'nuevo' || estado === 'en espera') && !caso.asignado;
+  }
+
+  // Paso 3: la opción "Cancelar caso" se ofrece mientras el caso siga abierto; FA01 la rechaza si ya está en atención.
+  mostrarOpcionCancelar(caso: Caso): boolean {
+    return ['nuevo', 'en espera', 'en proceso', 'reapertura solicitada'].includes(caso.estado?.toLowerCase());
   }
 
   abrirModalCancelar(caso: Caso): void {
+    this.mensajeAccion = '';
+    this.errorAccion = '';
     this.casoSeleccionado = caso;
+
+    // FA01: el caso ya fue asignado o está en atención
+    if (!this.puedeCancelar(caso)) {
+      this.mostrarModalDetalle = false;
+      this.errorAccion = 'El caso ya se encuentra en atención y no puede ser cancelado';
+      return;
+    }
+
     this.motivoCancelacion = '';
     this.errorMotivoCancelacion = '';
     this.mostrarModalCancelar = true;
@@ -184,32 +218,48 @@ export class ConsultarCasosComponent implements OnInit {
     this.errorMotivoCancelacion = '';
   }
 
+  // FA02: el usuario selecciona "No": se informa y se retorna al detalle del caso.
+  declinarCancelacion(): void {
+    this.cerrarModalCancelar();
+    this.mensajeAccion = 'Se ha cancelado la operación satisfactoriamente';
+    this.mostrarModalDetalle = true;
+  }
+
+  // Pasos 7 a 11: el usuario selecciona "Sí".
   confirmarCancelacion(): void {
+    if (!this.casoSeleccionado) return;
     const motivoLimpio = this.motivoCancelacion.trim();
-    if (!motivoLimpio || motivoLimpio.length < 10) return;
 
-    if (this.casoSeleccionado) {
-      this.casoService.cancelar(this.casoSeleccionado.idCaso, motivoLimpio).subscribe({
-        next: (casoApi) => {
-          if (this.casoSeleccionado) {
-            this.casoSeleccionado.estado = casoApi.estadoCaso.nombre;
-            this.casoSeleccionado.motivoCancelacion = motivoLimpio;
-
-            const index = this.casos.findIndex(c => c.idCaso === this.casoSeleccionado?.idCaso);
-            if (index !== -1) {
-              this.casos[index] = { ...this.casoSeleccionado };
-            }
-          }
-
-          this.aplicarFiltros();
-          this.cerrarModalCancelar();
-        },
-        error: (err) => {
-          // FA01: el caso ya esta en atencion y no puede cancelarse
-          this.errorMotivoCancelacion = err.error?.message ?? 'No se pudo cancelar el caso';
-        }
-      });
+    // Paso 5: el motivo es opcional (máximo 250 caracteres)
+    if (motivoLimpio.length > 250) {
+      this.errorMotivoCancelacion = 'El motivo de cancelación no puede superar los 250 caracteres';
+      return;
     }
+
+    this.casoService.cancelar(this.casoSeleccionado.idCaso, motivoLimpio).subscribe({
+      next: (casoApi) => {
+        if (this.casoSeleccionado) {
+          this.casoSeleccionado.estado = casoApi.estadoCaso.nombre;
+          this.casoSeleccionado.motivoCancelacion = motivoLimpio || undefined;
+
+          const index = this.casos.findIndex(c => c.idCaso === this.casoSeleccionado?.idCaso);
+          if (index !== -1) {
+            this.casos[index] = { ...this.casoSeleccionado };
+          }
+        }
+
+        this.aplicarFiltros();
+        this.cerrarModalCancelar();
+        this.mostrarModalDetalle = false;
+        this.mensajeAccion = 'El caso fue cancelado satisfactoriamente';
+      },
+      error: (err) => {
+        // FA01: el caso ya está en atención y no puede cancelarse
+        this.cerrarModalCancelar();
+        this.mostrarModalDetalle = false;
+        this.errorAccion = err.error?.message ?? 'No se pudo cancelar el caso';
+      }
+    });
   }
 
   puedeEvaluar(caso: Caso): boolean {
@@ -236,6 +286,8 @@ export class ConsultarCasosComponent implements OnInit {
   }
 
   enviarEvaluacion(): void {
+    this.mensajeErrorEvaluar = '';
+    this.mensajeExitoEvaluar = '';
     const calificacion = this.evaluacionForm.get('calificacion')?.value;
     const comentarios = this.evaluacionForm.get('comentarios')?.value || '';
 
@@ -322,7 +374,7 @@ export class ConsultarCasosComponent implements OnInit {
       const archivo = input.files[0];
       const formatosPermitidos = ['image/jpeg', 'image/png', 'application/pdf'];
       if (!formatosPermitidos.includes(archivo.type) || archivo.size > 2 * 1024 * 1024) {
-        this.mensajeErrorReapertura = 'Archivo inválido (debe ser JPG/PNG/PDF y menor a 2MB).';
+        this.mensajeErrorReapertura = 'El archivo adjunto supera los 2 MB o no corresponde a un formato permitido (PDF/Imagen)';
         input.value = '';
         return;
       }
@@ -332,6 +384,8 @@ export class ConsultarCasosComponent implements OnInit {
   }
 
   enviarSolicitudReapertura(): void {
+    this.mensajeErrorReapertura = '';
+    this.mensajeExitoReapertura = '';
     if (!this.casoSeleccionado) return;
     const motivo = this.reaperturaForm.get('motivo')?.value?.trim();
 

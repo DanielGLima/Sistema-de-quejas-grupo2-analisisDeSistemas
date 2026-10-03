@@ -15,7 +15,7 @@ import java.util.Arrays;
 public class SesionPersonal {
 
     public static final String SESSION_ID_PERSONAL = "idPersonal";
-    public static final String SIN_PERMISOS = "No posee permisos suficientes para realizar esta accion";
+    public static final String SIN_PERMISOS = "No posee permisos suficientes para realizar la acción";
 
     @Autowired
     private PersonalService personalService;
@@ -23,11 +23,11 @@ public class SesionPersonal {
     public Personal requerir(HttpSession session) {
         Object idPersonal = session.getAttribute(SESSION_ID_PERSONAL);
         if (idPersonal == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Debe iniciar sesion");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Debe iniciar sesión");
         }
         return personalService.findById((Integer) idPersonal)
                 .filter(personal -> Boolean.TRUE.equals(personal.getActivo()))
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Debe iniciar sesion"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Debe iniciar sesión"));
     }
 
     // CU-10 FA02 / CU-13 FA04: rechaza si el rol no esta entre los permitidos.
