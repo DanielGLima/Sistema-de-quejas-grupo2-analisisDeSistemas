@@ -122,12 +122,16 @@ public class AuthController {
 
         RecuperacionContrasena recuperacion = recuperacionContrasenaService.generarCodigo(usuario);
 
-        emailService.enviar(
+        boolean enviado = emailService.enviar(
                 request.getCorreo(),
                 "Recuperacion de contrasena - Sistema de Quejas Las Delicias",
                 "Tu codigo de recuperacion es: " + recuperacion.getCodigoToken()
                         + "\n\nEste codigo vence en 15 minutos. Si no solicitaste este cambio, ignora este mensaje."
         );
+        if (!enviado) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "No se pudo enviar el correo con el codigo de recuperacion. Intente nuevamente en unos minutos");
+        }
 
         return ResponseEntity.ok(Map.of("mensaje", "Se enviaron instrucciones de recuperacion a tu correo"));
     }
