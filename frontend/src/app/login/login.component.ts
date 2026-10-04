@@ -15,6 +15,9 @@ export class LoginComponent implements OnInit {
   loginForm!: FormGroup;
   mensajeError: string = '';
 
+  // Formato estricto: usuario@dominio.extension (ej: usuario@correo.com)
+  private emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
   constructor(
     private fb: FormBuilder,
     private router: Router,
@@ -23,7 +26,11 @@ export class LoginComponent implements OnInit {
 
   ngOnInit(): void {
     this.loginForm = this.fb.group({
-      correoElectronico: ['', [Validators.required, Validators.email, Validators.maxLength(100)]],
+      correoElectronico: ['', [
+        Validators.required, 
+        Validators.maxLength(100),
+        Validators.pattern(this.emailPattern)
+      ]],
       password: ['', [Validators.required, Validators.maxLength(20)]]
     });
   }
@@ -31,18 +38,28 @@ export class LoginComponent implements OnInit {
   iniciarSesion(): void {
     this.mensajeError = '';
 
-    if (this.loginForm.invalid) {
+    const correoControl = this.loginForm.get('correoElectronico');
+    const passwordControl = this.loginForm.get('password');
+    const valorCorreo = correoControl?.value?.trim() || '';
+    const valorPassword = passwordControl?.value || '';
+
+    // Si ambos campos o alguno está vacío
+    if (!valorCorreo || !valorPassword) {
       this.loginForm.markAllAsTouched();
       this.mensajeError = 'Debe ingresar los campos obligatorios';
       return;
     }
 
-const { correoElectronico, password } = this.loginForm.value;
+    // Validación de formato de correo (FA)
+    if (!this.emailPattern.test(valorCorreo)) {
+      correoControl?.markAsTouched();
+      this.mensajeError = 'Debe ingresar un correo electrónico válido (ejemplo: usuario@correo.com)';
+      return;
+    }
 
-    // Enviar exactamente los nombres que espera LoginRequest en Java:
     const credenciales = {
-      correo: correoElectronico,
-      password: password
+      correo: valorCorreo,
+      password: valorPassword
     };
 
     this.http.post<any>('http://localhost:8081/api/auth/login', credenciales, {

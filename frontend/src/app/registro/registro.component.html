@@ -7,17 +7,17 @@
 
     <!-- Mensajes de alerta de error -->
     <div *ngIf="mensajeError" class="alert alert-danger">
-      <span>⚠️ {{ mensajeError }}</span>
+      <span>{{ mensajeError }}</span>
     </div>
 
     <!-- Mensaje informativo de cancelación (FA03) -->
     <div *ngIf="mensajeInfo" class="alert alert-info">
-      <span>ℹ️ {{ mensajeInfo }}</span>
+      <span>{{ mensajeInfo }}</span>
     </div>
 
     <!-- Mensaje de éxito de registro -->
     <div *ngIf="mensajeExito" class="alert alert-success">
-      <span>✅ {{ mensajeExito }}</span>
+      <span>{{ mensajeExito }}</span>
     </div>
 
     <form [formGroup]="registroForm">
@@ -29,6 +29,7 @@
           maxlength="100" 
           placeholder="Ingrese su nombre completo"
           formControlName="nombreCompleto" 
+          (input)="soloLetras($event, 'nombreCompleto')"
         />
       </div>
 
@@ -69,9 +70,11 @@
           <input 
             id="codigoArea" 
             type="text" 
-            maxlength="4" 
+            inputmode="numeric"
+            maxlength="3" 
             placeholder="ej 502"
             formControlName="codigoArea" 
+            (input)="soloNumeros($event, 'codigoArea')"
           />
         </div>
 
@@ -80,9 +83,11 @@
           <input 
             id="telefono" 
             type="text" 
+            inputmode="numeric"
             maxlength="8" 
             placeholder="12345678"
             formControlName="telefono" 
+            (input)="soloNumeros($event, 'telefono')"
           />
         </div>
       </div>
@@ -115,7 +120,7 @@
             id="password" 
             type="password" 
             maxlength="20" 
-            placeholder="Mínimo 8 caracteres"
+            placeholder="Mínimo 6 caracteres"
             formControlName="password" 
           />
         </div>
