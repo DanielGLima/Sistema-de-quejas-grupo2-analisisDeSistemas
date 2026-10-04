@@ -1,7 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-recuperar-password',
@@ -15,22 +16,26 @@ export class RecuperarPasswordComponent implements OnInit {
   validacionForm!: FormGroup;
 
   faseCodigoEnviado: boolean = false;
+  correoGuardado: string = ''; // Guarda el correo para enviarlo en el paso 2
 
   mensajeError: string = '';
   mensajeExito: string = '';
+  cargando: boolean = false;
 
-  // Expresión para formato: al menos una mayúscula, un número y un carácter especial
   private passwordPattern = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>_\-])/;
+  private apiUrl = 'http://localhost:8081/api/auth';
 
-  constructor(private fb: FormBuilder, private router: Router) {}
+  constructor(
+    private fb: FormBuilder,
+    private router: Router,
+    private http: HttpClient
+  ) {}
 
   ngOnInit(): void {
-    // Paso 3: correo electrónico (alfanumérico / formato email, hasta 100 caracteres)
     this.correoForm = this.fb.group({
       correoElectronico: ['', [Validators.required, Validators.email, Validators.maxLength(100)]]
     });
 
-    // Pasos 6 y 7: código de recuperación (6 caracteres), nueva contraseña y confirmación
     this.validacionForm = this.fb.group({
       codigoRecuperacion: ['', [Validators.required, Validators.maxLength(6)]],
       nuevaPassword: ['', [Validators.required, Validators.maxLength(20)]],
@@ -38,31 +43,40 @@ export class RecuperarPasswordComponent implements OnInit {
     });
   }
 
-  // Paso 4: Botón "ENVIAR"
+  // Paso 4: Botón "ENVIAR" -> Conecta con POST /api/auth/recuperar/solicitar
   enviarCorreo(): void {
     this.limpiarMensajes();
 
     const control = this.correoForm.get('correoElectronico');
     const valor = control?.value?.trim() || '';
 
-    // FA01: Campo correo electrónico vacío
     if (!valor) {
       this.mensajeError = 'Debe ingresar un correo electrónico';
       return;
     }
 
-    // FA02: Formato de correo electrónico no válido
     if (control?.invalid) {
       this.mensajeError = 'Debe ingresar un correo electrónico válido';
       return;
     }
 
-    // Paso 5 & FA03: Mensaje de seguridad neutro sin revelar si la cuenta existe
-    this.mensajeExito = 'Se enviarán instrucciones de recuperación si el correo electrónico es válido';
-    this.faseCodigoEnviado = true;
+    this.cargando = true;
+    this.correoGuardado = valor;
+
+    this.http.post<any>(`${this.apiUrl}/recuperar/solicitar`, { correo: valor }).subscribe({
+      next: (res) => {
+        this.cargando = false;
+        this.mensajeExito = res.mensaje || 'Se enviaron instrucciones de recuperación a tu correo';
+        this.faseCodigoEnviado = true;
+      },
+      error: (err) => {
+        this.cargando = false;
+        this.mensajeError = err.error?.message || err.error?.error || 'Correo no registrado o error de conexión';
+      }
+    });
   }
 
-  // Paso 8: Botón "Validar"
+  // Paso 8: Botón "Validar" -> Conecta con POST /api/auth/recuperar/confirmar
   validarYRestablecer(): void {
     this.limpiarMensajes();
 
@@ -70,49 +84,57 @@ export class RecuperarPasswordComponent implements OnInit {
     const pass = this.validacionForm.get('nuevaPassword')?.value || '';
     const confirm = this.validacionForm.get('confirmacionPassword')?.value || '';
 
-    // FA04: Campo código de recuperación vacío
     if (!codigo) {
       this.mensajeError = 'Debe ingresar el código de recuperación';
       return;
     }
 
-    // FA05: Código de recuperación no válido o incorrecto
     if (codigo.length !== 6) {
       this.mensajeError = 'El código ingresado es incorrecto';
       return;
     }
 
-    // FA07: Campos de contraseña vacíos
     if (!pass || !confirm) {
       this.mensajeError = 'Debe ingresar y confirmar su nueva contraseña';
       return;
     }
 
-    // FA08: Longitud de la contraseña fuera de rango (Mínimo 6 y Máximo 20)
     if (pass.length < 6 || pass.length > 20) {
       this.mensajeError = 'La contraseña debe tener entre 6 y 20 caracteres';
       return;
     }
 
-    // FA09: Formato de la contraseña no válido
     if (!this.passwordPattern.test(pass)) {
       this.mensajeError = 'El formato de la contraseña debe incluir al menos una letra mayúscula, un número y un carácter especial';
       return;
     }
 
-    // FA10: Las contraseñas no coinciden
     if (pass !== confirm) {
       this.mensajeError = 'Las contraseñas ingresadas no coinciden';
       return;
     }
 
-    // Paso 9 y 10: Mensaje de confirmación en la UI
-    this.mensajeExito = 'Contraseña restablecida exitosamente. Redirigiendo...';
+    this.cargando = true;
 
-    // Paso 11: Redirección automática a CU-00 (Login)
-    setTimeout(() => {
-      this.router.navigate(['/login']);
-    }, 2000);
+    const payload = {
+      correo: this.correoGuardado,
+      codigo: codigo,
+      passwordNueva: pass
+    };
+
+    this.http.post<any>(`${this.apiUrl}/recuperar/confirmar`, payload).subscribe({
+      next: () => {
+        this.cargando = false;
+        this.mensajeExito = 'Contraseña restablecida exitosamente. Redirigiendo al inicio de sesión...';
+        setTimeout(() => {
+          this.router.navigate(['/login']);
+        }, 2000);
+      },
+      error: (err) => {
+        this.cargando = false;
+        this.mensajeError = err.error?.message || 'El código de recuperación ingresado es incorrecto o ya expiró';
+      }
+    });
   }
 
   private limpiarMensajes(): void {
