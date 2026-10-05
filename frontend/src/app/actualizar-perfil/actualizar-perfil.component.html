@@ -6,41 +6,60 @@
       <p class="subtitle">Sistema de Quejas - Actualizar Perfil de Usuario</p>
     </div>
 
-    <!-- Mensajes de estado -->
+    <!-- FA01: Mensaje de error -->
     <div *ngIf="mensajeError" class="alert alert-danger">
       <span>{{ mensajeError }}</span>
     </div>
 
+    <!-- Flujo Normal: Mensaje de exito -->
     <div *ngIf="mensajeExito" class="alert alert-success">
-      <span>✅ {{ mensajeExito }}</span>
+      <span>{{ mensajeExito }}</span>
     </div>
 
+    <!-- FA02: Mensaje informativo de cancelacion -->
     <div *ngIf="mensajeInfo" class="alert alert-info">
-      <span>ℹ️ {{ mensajeInfo }}</span>
+      <span>{{ mensajeInfo }}</span>
     </div>
 
     <form [formGroup]="perfilForm" (ngSubmit)="solicitarConfirmacion()">
+      <!-- nombre completo -->
+      <div class="form-group">
+        <label for="nombreCompleto">nombre completo</label>
+        <input 
+          id="nombreCompleto" 
+          type="text" 
+          maxlength="100"
+          formControlName="nombreCompleto" 
+          placeholder="Ingrese su nombre completo"
+          [class.is-invalid]="esInvalido('nombreCompleto')"
+          (input)="soloLetras($event, 'nombreCompleto')"
+        />
+      </div>
+
       <div class="form-row">
-        <!-- nombre -->
+        <!-- fecha de nacimiento -->
         <div class="form-group">
-          <label for="nombre">nombre</label>
+          <label for="fechaNacimiento">fecha de nacimiento</label>
           <input 
-            id="nombre" 
-            type="text" 
-            formControlName="nombre" 
-            placeholder="Ingrese su nombre"
+            id="fechaNacimiento" 
+            type="date" 
+            [max]="fechaMaximaHoy"
+            formControlName="fechaNacimiento" 
+            [class.is-invalid]="esInvalido('fechaNacimiento')"
           />
         </div>
 
-        <!-- apellido -->
+        <!-- nacionalidad -->
         <div class="form-group">
-          <label for="apellido">apellido</label>
-          <input 
-            id="apellido" 
-            type="text" 
-            formControlName="apellido" 
-            placeholder="Ingrese su apellido"
-          />
+          <label for="nacionalidad">nacionalidad</label>
+          <select 
+            id="nacionalidad" 
+            formControlName="nacionalidad"
+            [class.is-invalid]="esInvalido('nacionalidad')"
+          >
+            <option value="">Seleccione una nacionalidad</option>
+            <option *ngFor="let nac of listaNacionalidades" [value]="nac">{{ nac }}</option>
+          </select>
         </div>
       </div>
 
@@ -56,34 +75,55 @@
       </div>
 
       <div class="form-row">
-        <!-- número de teléfono -->
-        <div class="form-group">
+        <!-- código de área -->
+        <div class="form-group codigo-area">
+          <label for="codigoArea">código de área</label>
+          <input 
+            id="codigoArea" 
+            type="text" 
+            maxlength="3" 
+            placeholder="502"
+            formControlName="codigoArea" 
+            [class.is-invalid]="esInvalido('codigoArea')"
+            (input)="soloNumeros($event, 'codigoArea')"
+          />
+        </div>
+
+        <!-- teléfono -->
+        <div class="form-group telefono">
           <label for="telefono">número de teléfono</label>
           <input 
             id="telefono" 
             type="text" 
+            maxlength="8" 
+            placeholder="12345678"
             formControlName="telefono" 
-            placeholder="Ej: 55443322"
+            [class.is-invalid]="esInvalido('telefono')"
+            (input)="soloNumeros($event, 'telefono')"
           />
-        </div>
-
-        <!-- género -->
-        <div class="form-group">
-          <label for="genero">género</label>
-          <select id="genero" formControlName="genero">
-            <option value="" disabled>Seleccione una opción</option>
-            <option *ngFor="let g of generos" [value]="g">{{ g }}</option>
-          </select>
         </div>
       </div>
 
+      <!-- dirección residencial -->
+      <div class="form-group">
+        <label for="direccion">dirección residencial</label>
+        <input 
+          id="direccion" 
+          type="text" 
+          maxlength="150" 
+          placeholder="Ingrese su dirección"
+          formControlName="direccion" 
+          [class.is-invalid]="esInvalido('direccion')"
+        />
+      </div>
+
       <!-- Botón de acción principal -->
-      <button type="submit" class="btn btn-primary">
+      <button type="submit" class="btn btn-primary" [disabled]="cargando">
         Actualizar Datos
       </button>
     </form>
 
-    <!-- Modal de confirmación (Paso 5 y 6) -->
+    <!-- FA02: Modal de confirmación (Paso 5) -->
     <div *ngIf="mostrarModalConfirmacion" class="modal-backdrop">
       <div class="modal-card">
         <h3>Confirmación</h3>

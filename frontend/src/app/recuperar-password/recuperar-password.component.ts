@@ -16,13 +16,16 @@ export class RecuperarPasswordComponent implements OnInit {
   validacionForm!: FormGroup;
 
   faseCodigoEnviado: boolean = false;
-  correoGuardado: string = ''; // Guarda el correo para enviarlo en el paso 2
+  correoGuardado: string = '';
 
   mensajeError: string = '';
   mensajeExito: string = '';
   cargando: boolean = false;
 
-  private passwordPattern = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>_\-])/;
+  // Formato estricto para email: usuario@dominio.extension
+  private emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  // Al menos una mayúscula, un número y un carácter especial
+  private passwordPattern = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$\%^&*(),.?":{}\vert{}<>_\-]).+$/;
   private apiUrl = 'http://localhost:8081/api/auth';
 
   constructor(
@@ -33,17 +36,26 @@ export class RecuperarPasswordComponent implements OnInit {
 
   ngOnInit(): void {
     this.correoForm = this.fb.group({
-      correoElectronico: ['', [Validators.required, Validators.email, Validators.maxLength(100)]]
+      correoElectronico: ['', [
+        Validators.required, 
+        Validators.maxLength(100),
+        Validators.pattern(this.emailPattern)
+      ]]
     });
 
     this.validacionForm = this.fb.group({
       codigoRecuperacion: ['', [Validators.required, Validators.maxLength(6)]],
-      nuevaPassword: ['', [Validators.required, Validators.maxLength(20)]],
-      confirmacionPassword: ['', [Validators.required, Validators.maxLength(20)]]
+      nuevaPassword: ['', [
+        Validators.required, 
+        Validators.minLength(6), 
+        Validators.maxLength(20),
+        Validators.pattern(this.passwordPattern)
+      ]],
+      confirmacionPassword: ['', [Validators.required]]
     });
   }
 
-  // Paso 4: Botón "ENVIAR" -> Conecta con POST /api/auth/recuperar/solicitar
+  // Paso 4: Botón "ENVIAR" -> Valida correo y conecta con Spring Boot
   enviarCorreo(): void {
     this.limpiarMensajes();
 
@@ -51,12 +63,14 @@ export class RecuperarPasswordComponent implements OnInit {
     const valor = control?.value?.trim() || '';
 
     if (!valor) {
+      control?.markAsTouched();
       this.mensajeError = 'Debe ingresar un correo electrónico';
       return;
     }
 
-    if (control?.invalid) {
-      this.mensajeError = 'Debe ingresar un correo electrónico válido';
+    if (!this.emailPattern.test(valor)) {
+      control?.markAsTouched();
+      this.mensajeError = 'Debe ingresar un correo electrónico válido (ejemplo: usuario@correo.com)';
       return;
     }
 
@@ -76,7 +90,7 @@ export class RecuperarPasswordComponent implements OnInit {
     });
   }
 
-  // Paso 8: Botón "Validar" -> Conecta con POST /api/auth/recuperar/confirmar
+  // Paso 8: Botón "Validar" -> Valida código, complejidad de contraseña y actualiza
   validarYRestablecer(): void {
     this.limpiarMensajes();
 
@@ -105,12 +119,12 @@ export class RecuperarPasswordComponent implements OnInit {
     }
 
     if (!this.passwordPattern.test(pass)) {
-      this.mensajeError = 'El formato de la contraseña debe incluir al menos una letra mayúscula, un número y un carácter especial';
+      this.mensajeError = 'El formato de la contraseña debe incluir al menos una letra mayúscula, un carácter especial y un número';
       return;
     }
 
     if (pass !== confirm) {
-      this.mensajeError = 'Las contraseñas ingresadas no coinciden';
+      this.mensajeError = 'Las contraseñas no coinciden';
       return;
     }
 
@@ -125,7 +139,10 @@ export class RecuperarPasswordComponent implements OnInit {
     this.http.post<any>(`${this.apiUrl}/recuperar/confirmar`, payload).subscribe({
       next: () => {
         this.cargando = false;
-        this.mensajeExito = 'Contraseña restablecida exitosamente. Redirigiendo al inicio de sesión...';
+        this.limpiarMensajes();
+        this.mensajeExito = 'Contraseña restablecida exitosamente';
+        this.validacionForm.reset();
+        
         setTimeout(() => {
           this.router.navigate(['/login']);
         }, 2000);

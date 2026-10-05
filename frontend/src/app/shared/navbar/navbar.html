@@ -26,9 +26,25 @@
     </a>
 
     <!-- Botón Creativo Cerrar Sesión (CU-04) -->
-    <button type="button" class="btn-logout" (click)="cerrarSesion()">
+    <button type="button" class="btn-logout" (click)="abrirModalLogout()">
       <span class="logout-icon">🚪</span>
       <span class="logout-text">Cerrar Sesión</span>
     </button>
   </nav>
 </header>
+
+<!-- Modal de confirmación para Cerrar Sesión (CU-04 / FA01) -->
+<div *ngIf="mostrarModalLogout" class="modal-backdrop">
+  <div class="modal-card">
+    <h3>Cerrar Sesión</h3>
+    <p>¿Está seguro de que desea cerrar la sesión?</p>
+    <div class="modal-buttons">
+      <button type="button" class="btn btn-primary" (click)="confirmarCierreSesion(true)">
+        Sí
+      </button>
+      <button type="button" class="btn btn-secondary" (click)="confirmarCierreSesion(false)">
+        No
+      </button>
+    </div>
+  </div>
+</div>
