@@ -18,47 +18,47 @@ import java.util.UUID;
 @Service
 public class FileStorageService {
 
-    private static final long TAMANO_MAXIMO_BYTES = 2 * 1024 * 1024;
-    private static final List<String> TIPOS_PERMITIDOS = List.of("jpg", "jpeg", "png", "pdf");
+  private static final long TAMANO_MAXIMO_BYTES = 2L * 1024L * 1024L;
+  private static final List<String> TIPOS_PERMITIDOS = List.of("jpg", "jpeg", "png", "pdf");
 
-    private final Path directorioBase = Paths.get("uploads").toAbsolutePath().normalize();
+  private final Path directorioBase = Paths.get("uploads").toAbsolutePath().normalize();
 
-    public FileStorageService() {
-        try {
-            Files.createDirectories(directorioBase);
-        } catch (IOException e) {
-            throw new UncheckedIOException("No se pudo crear el directorio de subida de archivos", e);
-        }
+  public FileStorageService() {
+    try {
+      Files.createDirectories(directorioBase);
+    } catch (IOException e) {
+      throw new UncheckedIOException("No se pudo crear el directorio de subida de archivos", e);
+    }
+  }
+
+  public String guardar(MultipartFile archivo) {
+    if (archivo == null || archivo.isEmpty() || archivo.getSize() > TAMANO_MAXIMO_BYTES) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+        "El archivo adjunto supera los 2 MB o no corresponde a un formato permitido (PDF/Imagen)");
     }
 
-    public String guardar(MultipartFile archivo) {
-        if (archivo.isEmpty() || archivo.getSize() > TAMANO_MAXIMO_BYTES) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "El archivo adjunto supera los 2 MB o no corresponde a un formato permitido (PDF/Imagen)");
-        }
-
-        String extension = obtenerExtension(archivo.getOriginalFilename()).toLowerCase();
-        if (!TIPOS_PERMITIDOS.contains(extension)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "El archivo adjunto supera los 2 MB o no corresponde a un formato permitido (PDF/Imagen)");
-        }
-
-        String nombreArchivo = UUID.randomUUID() + "." + extension;
-        Path destino = directorioBase.resolve(nombreArchivo);
-
-        try {
-            Files.copy(archivo.getInputStream(), destino, StandardCopyOption.REPLACE_EXISTING);
-        } catch (IOException e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "No se pudo guardar el archivo adjunto");
-        }
-
-        return nombreArchivo;
+    String extension = obtenerExtension(archivo.getOriginalFilename()).toLowerCase();
+    if (!TIPOS_PERMITIDOS.contains(extension)) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+        "El archivo adjunto supera los 2 MB o no corresponde a un formato permitido (PDF/Imagen)");
     }
 
-    private String obtenerExtension(String nombreArchivo) {
-        if (nombreArchivo == null || !nombreArchivo.contains(".")) {
-            return "";
-        }
-        return nombreArchivo.substring(nombreArchivo.lastIndexOf('.') + 1);
+    String nombreArchivo = UUID.randomUUID() + "." + extension;
+    Path destino = directorioBase.resolve(nombreArchivo);
+
+    try {
+      Files.copy(archivo.getInputStream(), destino, StandardCopyOption.REPLACE_EXISTING);
+    } catch (IOException e) {
+      throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "No se pudo guardar el archivo adjunto");
     }
+
+    return nombreArchivo;
+  }
+
+  private String obtenerExtension(String nombreArchivo) {
+    if (nombreArchivo == null || !nombreArchivo.contains(".")) {
+      return "";
+    }
+    return nombreArchivo.substring(nombreArchivo.lastIndexOf('.') + 1);
+  }
 }

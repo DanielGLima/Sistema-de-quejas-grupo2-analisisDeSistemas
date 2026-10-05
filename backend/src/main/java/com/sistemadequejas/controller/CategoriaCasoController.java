@@ -1,3 +1,4 @@
+
 package com.sistemadequejas.controller;
 
 import com.sistemadequejas.model.CategoriaCaso;
@@ -10,6 +11,8 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/categorias-caso")
+@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+
 public class CategoriaCasoController {
 
     @Autowired

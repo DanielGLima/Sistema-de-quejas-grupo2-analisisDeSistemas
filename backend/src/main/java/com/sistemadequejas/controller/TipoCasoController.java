@@ -10,6 +10,8 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/tipos-caso")
+@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+
 public class TipoCasoController {
 
     @Autowired
