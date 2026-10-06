@@ -164,3 +164,13 @@ asignación/reasignación, respuesta oficial y reapertura solicitada.
   "Gestión de casos", "Respuesta de casos", "Reapertura de casos", "Administración interna", "Administración de catálogos".
 - **Valores anteriores y nuevos**: se guardan siempre como JSON con la forma `{"anterior": {...}, "nuevo": {...}}`.
 - **Consulta de la bitácora:** solo el Administrador General.
+
+---
+
+## CU-05 Registrar Nuevo Caso (actualización)
+
+- **Adjuntar evidencias:** Obligatoriedad = **No** (opcional). Un caso puede registrarse sin archivos; si se adjuntan, deben ser JPG, PNG o PDF de máximo 2 MB cada uno.
+
+## CU-00 / CU-04 Cierre de sesión (actualización)
+
+- El mensaje “Sesión finalizada correctamente” se muestra en la pantalla del portal tras redirigir (no en una ventana emergente).

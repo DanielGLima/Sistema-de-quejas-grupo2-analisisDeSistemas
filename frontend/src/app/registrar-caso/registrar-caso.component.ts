@@ -100,7 +100,7 @@ export class RegistrarCasoComponent implements OnInit {
     this.mensajeExito = '';
 
     const obligatorios = ['idTipoCaso', 'idSucursal', 'idCategoria', 'descripcion'];
-    const faltanObligatorios = obligatorios.some(c => this.casoForm.get(c)?.invalid) || this.archivosSeleccionados.length === 0;
+    const faltanObligatorios = obligatorios.some(c => this.casoForm.get(c)?.invalid);
 
     // FA01: campos obligatorios
     if (faltanObligatorios) {

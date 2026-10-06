@@ -42,10 +42,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
     localStorage.clear();
     sessionStorage.clear();
 
-    // Paso 5: Mensaje de éxito especificado en el caso de uso
-    alert('Sesión finalizada correctamente');
-
-    // Paso 6: Redirección al portal público CU-00
-    this.router.navigate(['/login']);
+    // Pasos 5 y 6: redirección al portal público (CU-00) con el mensaje de éxito en pantalla, sin alert.
+    this.router.navigate(['/login'], { state: { sesionFinalizada: true } });
   }
 }

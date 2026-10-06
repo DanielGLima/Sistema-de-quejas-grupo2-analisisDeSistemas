@@ -99,9 +99,11 @@ public class CasoController {
 
         Usuario usuario = usuarioAutenticado(session);
 
-        // FA01: campos obligatorios (categoria del servicio, descripcion 10-1000 caracteres, al menos una evidencia).
-        if (descripcion == null || descripcion.trim().length() < 10 || descripcion.length() > 1000
-                || archivos == null || archivos.isEmpty()) {
+        // FA01: campos obligatorios (categoria del servicio y descripcion 10-1000 caracteres). La evidencia es opcional.
+        if (archivos == null) {
+            archivos = List.of();
+        }
+        if (descripcion == null || descripcion.trim().length() < 10 || descripcion.length() > 1000) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe ingresar los campos obligatorios");
         }
 

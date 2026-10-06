@@ -20,6 +20,8 @@
       <h2>Ingresar al sistema</h2>
       <p class="sub">Clientes y personal usan la misma pantalla.</p>
 
+      <div *ngIf="mensajeExito" class="alert alert-success" role="status">{{ mensajeExito }}</div>
+
       <div *ngIf="mensajeError" class="alert alert-danger" role="alert">
         <span>{{ mensajeError }}</span>
         <button *ngIf="servicioFueraDeLinea" type="button" class="btn-reintentar" (click)="reintentar()">Reintentar</button>

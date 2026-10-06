@@ -15,6 +15,7 @@ import { AdminService } from '../services/admin.service';
 export class LoginComponent implements OnInit {
   loginForm!: FormGroup;
   mensajeError: string = '';
+  mensajeExito: string = '';
   servicioFueraDeLinea: boolean = false;
 
   constructor(
@@ -25,6 +26,10 @@ export class LoginComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    // Cierre de sesión (CU-00, flujo 2): aviso de éxito al volver al portal.
+    if (history.state?.sesionFinalizada) {
+      this.mensajeExito = 'Sesión finalizada correctamente';
+    }
     this.loginForm = this.fb.group({
       correoElectronico: ['', [Validators.required, Validators.email, Validators.maxLength(100)]],
       password: ['', [Validators.required, Validators.maxLength(20)]]
@@ -32,6 +37,7 @@ export class LoginComponent implements OnInit {
   }
 
   iniciarSesion(): void {
+    this.mensajeExito = '';
     this.mensajeError = '';
     this.servicioFueraDeLinea = false;
 
