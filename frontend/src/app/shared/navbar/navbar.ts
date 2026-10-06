@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
@@ -11,8 +11,17 @@ import { AdminService } from '../../services/admin.service';
   templateUrl: './navbar.html',
   styleUrls: ['./navbar.scss']
 })
-export class NavbarComponent {
+export class NavbarComponent implements OnInit, OnDestroy {
   constructor(private router: Router, private authService: AuthService, private adminService: AdminService) {}
+
+  // Con el menú lateral visible, el contenido de la página deja espacio a la izquierda (ver styles.scss).
+  ngOnInit(): void {
+    document.body.classList.add('con-menu');
+  }
+
+  ngOnDestroy(): void {
+    document.body.classList.remove('con-menu');
+  }
 
   // Rol del personal interno si hay una sesión de personal (solo para armar el menú).
   get rolPersonal(): string | null {

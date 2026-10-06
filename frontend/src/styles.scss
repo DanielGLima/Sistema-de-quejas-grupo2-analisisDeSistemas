@@ -1,1 +1,64 @@
-/* You can add global styles to this file, and also import other style files */
+/* Identidad visual de Las Delicias.
+   Verde pino para la marca (login y registro), grafito para el panel interno y
+   azafrán como único acento. Los códigos de caso van en tipografía monoespaciada. */
+:root {
+  --pino: #12302a;
+  --pino-oscuro: #0a1c16;
+  --azafran: #e7a21b;
+  --azafran-texto: #2a1c00;
+
+  --grafito: #1a1d21;
+  --grafito-2: #262b31;
+  --tinta: #16191d;
+  --tinta-suave: #5b636b;
+  --linea: #e1e4e8;
+  --fondo: #f4f5f7;
+  --superficie: #ffffff;
+
+  --font-display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'Figtree', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+
+  --ancho-menu: 236px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--tinta);
+  background: var(--fondo);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  letter-spacing: -0.015em;
+}
+
+button, input, select, textarea { font-family: inherit; }
+
+:focus-visible { outline: 3px solid #0f7a5c; outline-offset: 2px; }
+
+/* Código de caso: como el folio de una comanda. */
+.codigo-caso { font-family: var(--font-mono); letter-spacing: 0.02em; }
+
+/* Con el menú lateral (pantallas internas) el contenido se desplaza a la derecha. */
+body.con-menu { padding-left: var(--ancho-menu); min-height: 100vh; }
+
+@media (max-width: 860px) {
+  body.con-menu { padding-left: 0; }
+}
+
+/* Fondo con foto para las pantallas públicas (login, registro, recuperar contraseña). */
+.fondo-foto {
+  background:
+    linear-gradient(180deg, rgba(10, 28, 22, 0.55) 0%, rgba(10, 28, 22, 0.8) 60%, rgba(10, 28, 22, 0.94) 100%),
+    url('/img/fondo-login.jpg') center / cover no-repeat,
+    var(--pino);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

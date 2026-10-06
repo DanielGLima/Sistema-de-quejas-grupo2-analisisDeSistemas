@@ -1,58 +1,60 @@
-<div class="page-wrapper">
-  <div class="login-card">
-    <div class="brand-header">
-      <div class="logo-icon">🍽️</div>
-      <h2>Restaurante Las Delicias</h2>
-      <p class="subtitle">Sistema de Quejas</p>
+<div class="pantalla">
+  <!-- Panel de marca con foto -->
+  <section class="marca fondo-foto">
+    <div class="marca-top">
+      <div class="logo"><i></i>Las Delicias <small>Quejas y sugerencias</small></div>
+      <h1>Cuéntanos cómo te fue. <em>Lo atendemos.</em></h1>
       <p class="info-servicio">Registre y dé seguimiento a sus quejas, reclamos, denuncias y sugerencias sobre la atención en nuestras sucursales. Portal disponible las 24 horas.</p>
     </div>
 
-    <div *ngIf="mensajeError" class="alert alert-danger">
-      <span>⚠️ {{ mensajeError }}</span>
-      <button *ngIf="servicioFueraDeLinea" type="button" class="btn-reintentar" (click)="reintentar()">Reintentar</button>
+    <div class="comanda" aria-hidden="true">
+      <div class="comanda-cod"><span class="codigo-caso">QUE-SER-0042</span><span>Seguimiento</span></div>
+      <div class="avance"><span class="on"></span><span class="on"></span><span class="on"></span><span></span></div>
+      <div class="comanda-estado">En proceso · actualizado hoy</div>
     </div>
+  </section>
 
-    <form [formGroup]="loginForm" (ngSubmit)="iniciarSesion()">
-      <!-- correo electrónico en minúsculas -->
- <!-- correo electrónico en minúsculas -->
-      <div class="form-group">
-        <label for="correoElectronico">correo electrónico</label>
-        <input
-          id="correoElectronico"
-          type="email"
-          maxlength="100"
-          placeholder="Ingrese su correo electrónico"
-          formControlName="correoElectronico"
-        />
+  <!-- Formulario -->
+  <section class="acceso">
+    <div class="acceso-caja">
+      <h2>Ingresar al sistema</h2>
+      <p class="sub">Clientes y personal usan la misma pantalla.</p>
+
+      <div *ngIf="mensajeError" class="alert alert-danger" role="alert">
+        <span>{{ mensajeError }}</span>
+        <button *ngIf="servicioFueraDeLinea" type="button" class="btn-reintentar" (click)="reintentar()">Reintentar</button>
       </div>
 
-      <!-- contraseña en minúsculas -->
-      <div class="form-group">
-        <label for="password">contraseña</label>
-        <input
-          id="password"
-          type="password"
-          maxlength="20"
-          placeholder="Ingrese su contraseña"
-          formControlName="password"
-        />
-      </div>
+      <form [formGroup]="loginForm" (ngSubmit)="iniciarSesion()">
+        <div class="form-group">
+          <label for="correoElectronico">correo electrónico</label>
+          <input
+            id="correoElectronico"
+            type="email"
+            maxlength="100"
+            placeholder="Ingrese su correo electrónico"
+            formControlName="correoElectronico"
+          />
+        </div>
 
-      <div class="forgot-link-container">
-        <a routerLink="/recuperar-password" class="forgot-link">¿Olvidaste tu contraseña?</a>
-      </div>
+        <div class="form-group">
+          <label for="password">contraseña</label>
+          <input
+            id="password"
+            type="password"
+            maxlength="20"
+            placeholder="Ingrese su contraseña"
+            formControlName="password"
+          />
+        </div>
 
-      <button type="submit" class="btn btn-primary">
-        Ingresar al Sistema
-      </button>
-    </form>
+        <button type="submit" class="btn btn-primary">Ingresar al Sistema</button>
 
-    <div class="divider">
-      <span>¿No tienes una cuenta?</span>
+        <div class="enlaces">
+          <a routerLink="/recuperar-password" class="forgot-link">¿Olvidaste tu contraseña?</a>
+          <span>¿No tienes una cuenta? <a routerLink="/registro" class="register-link">Registrarse</a></span>
+        </div>
+      </form>
     </div>
-
-    <a routerLink="/registro" class="btn btn-secondary register-btn">
-      Registrarse
-    </a>
-  </div>
+  </section>
 </div>

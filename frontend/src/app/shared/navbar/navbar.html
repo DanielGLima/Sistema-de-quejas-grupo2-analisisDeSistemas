@@ -1,48 +1,51 @@
-<header class="navbar-wrapper">
-  <!-- Brand / Logo -->
-  <div class="brand-badge" [routerLink]="rolPersonal ? '/gestionar-casos' : '/consultar-casos'">
-    <div class="logo-circle">🍽️</div>
-    <div class="brand-text">
-      <span class="brand-name">Las Delicias</span>
-      <span class="brand-tag">{{ rolPersonal ? 'Panel Administrativo' : 'Portal de Quejas' }}</span>
-    </div>
-  </div>
+<aside class="menu-lateral">
+  <!-- Marca -->
+  <a class="marca" [routerLink]="rolPersonal ? '/gestionar-casos' : '/consultar-casos'">
+    <i class="punto"></i>
+    <span class="marca-texto">
+      <span class="marca-nombre">Las Delicias</span>
+      <span class="marca-sub">{{ rolPersonal ? 'Panel administrativo' : 'Quejas y sugerencias' }}</span>
+    </span>
+  </a>
 
-  <!-- Navigation Links / Action Pills -->
-  <nav class="nav-actions">
+  <nav class="enlaces" aria-label="Principal">
     <ng-container *ngIf="!rolPersonal">
-      <a routerLink="/registrar-caso" routerLinkActive="active" class="nav-pill">
-        <span class="pill-icon">➕</span>
-        <span class="pill-text">Nuevo caso</span>
+      <a routerLink="/registrar-caso" routerLinkActive="activo" class="enlace">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        <span>Nuevo caso</span>
       </a>
-
-      <a routerLink="/consultar-casos" routerLinkActive="active" class="nav-pill">
-        <span class="pill-icon">📋</span>
-        <span class="pill-text">Mis casos</span>
+      <a routerLink="/consultar-casos" routerLinkActive="activo" class="enlace">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>
+        <span>Mis casos</span>
       </a>
-
-      <a routerLink="/actualizar-perfil" routerLinkActive="active" class="nav-pill">
-        <span class="pill-icon">👤</span>
-        <span class="pill-text">Mi perfil</span>
+      <a routerLink="/actualizar-perfil" routerLinkActive="activo" class="enlace">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>
+        <span>Mi perfil</span>
       </a>
     </ng-container>
 
     <ng-container *ngIf="rolPersonal">
-      <a routerLink="/gestionar-casos" routerLinkActive="active" class="nav-pill">
-        <span class="pill-icon">🗂️</span>
-        <span class="pill-text">Gestión de Casos</span>
+      <a routerLink="/gestionar-casos" routerLinkActive="activo" class="enlace">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v12H4zM4 10h16"/></svg>
+        <span>Gestión de casos</span>
       </a>
-
-      <a *ngIf="rolPersonal === 'Administrador General'" routerLink="/administrar" routerLinkActive="active" class="nav-pill">
-        <span class="pill-icon">⚙️</span>
-        <span class="pill-text">Administración</span>
+      <a *ngIf="rolPersonal === 'Administrador General'" routerLink="/administrar" routerLinkActive="activo" class="enlace">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>
+        <span>Administración</span>
       </a>
     </ng-container>
-
-    <!-- Botón Creativo Cerrar Sesión (CU-04) -->
-    <button type="button" class="btn-logout" (click)="cerrarSesion()">
-      <span class="logout-icon">🚪</span>
-      <span class="logout-text">Cerrar sesión</span>
-    </button>
   </nav>
-</header>
+
+  <div class="relleno"></div>
+
+  <div class="usuario">
+    <div class="usuario-datos">
+      <span class="usuario-rol">{{ rolPersonal ? rolPersonal : 'Cliente' }}</span>
+    </div>
+    <!-- CU-00: cerrar sesión -->
+    <button type="button" class="enlace cerrar" (click)="cerrarSesion()">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></svg>
+      <span>Cerrar sesión</span>
+    </button>
+  </div>
+</aside>
