@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../core/api-config';
-import { Caso, EvaluacionCasoApi, NuevoCasoRequest } from '../core/models/caso';
+import { Caso, CasoDetalle, EvaluacionCasoApi, NuevoCasoRequest } from '../core/models/caso';
 
 @Injectable({ providedIn: 'root' })
 export class CasoService {
@@ -33,6 +33,21 @@ export class CasoService {
   // CU-06
   misCasos(): Observable<Caso[]> {
     return this.http.get<Caso[]>(`${API_BASE_URL}/casos/mios`, { withCredentials: true });
+  }
+
+  // CU-06, paso 5: detalle con historial y respuestas oficiales
+  detalle(idCaso: number): Observable<CasoDetalle> {
+    return this.http.get<CasoDetalle>(`${API_BASE_URL}/casos/${idCaso}`, { withCredentials: true });
+  }
+
+  // CU-09
+  solicitarReapertura(idCaso: number, motivo: string, archivo?: File | null): Observable<Caso> {
+    const formData = new FormData();
+    formData.append('motivo', motivo);
+    if (archivo) {
+      formData.append('archivo', archivo);
+    }
+    return this.http.post<Caso>(`${API_BASE_URL}/casos/${idCaso}/reapertura`, formData, { withCredentials: true });
   }
 
   // CU-07

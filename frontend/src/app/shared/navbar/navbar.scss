@@ -1,147 +1,116 @@
-.navbar-wrapper {
+.menu-lateral {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--ancho-menu);
+  background: var(--grafito);
+  color: #e8eaec;
+  padding: 20px 14px;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 22px;
+  z-index: 50;
+  overflow-y: auto;
+}
+
+.marca {
+  display: flex;
   align-items: center;
-  padding: 12px 32px;
-  background: rgba(15, 23, 42, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  position: sticky;
-  top: 0;
-  z-index: 1000;
+  gap: 11px;
+  padding: 0 8px;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
 
-  // Brand Badge
-  .brand-badge {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    cursor: pointer;
-    user-select: none;
-    transition: transform 0.2s ease;
-
-    &:hover {
-      transform: scale(1.02);
-    }
-
-    .logo-circle {
-      width: 40px;
-      height: 40px;
-      background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.25rem;
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
-    }
-
-    .brand-text {
-      display: flex;
-      flex-direction: column;
-
-      .brand-name {
-        font-size: 1.1rem;
-        font-weight: 800;
-        color: #ffffff;
-        letter-spacing: 0.5px;
-      }
-
-      .brand-tag {
-        font-size: 0.72rem;
-        color: #94a3b8;
-        font-weight: 500;
-        letter-spacing: 0.8px;
-        text-transform: uppercase;
-      }
-    }
+  .punto {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--azafran);
+    flex: none;
   }
 
-  // Navigation Links
-  .nav-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-
-    .nav-pill {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 16px;
-      border-radius: 10px;
-      color: #94a3b8;
-      text-decoration: none;
-      font-size: 0.88rem;
-      font-weight: 600;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-
-      .pill-icon {
-        font-size: 0.95rem;
-        transition: transform 0.2s ease;
-      }
-
-      &:hover {
-        color: #f8fafc;
-        background: rgba(255, 255, 255, 0.08);
-        border-color: rgba(255, 255, 255, 0.15);
-        transform: translateY(-1px);
-
-        .pill-icon {
-          transform: scale(1.15);
-        }
-      }
-
-      &.active {
-        color: #38bdf8;
-        background: rgba(56, 189, 248, 0.12);
-        border-color: rgba(56, 189, 248, 0.4);
-        box-shadow: 0 0 16px rgba(56, 189, 248, 0.2);
-
-        .pill-icon {
-          filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.6));
-        }
-      }
-    }
-
-    // Botón Cerrar Sesión
-    .btn-logout {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-left: 8px;
-      padding: 8px 18px;
-      border-radius: 10px;
-      background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
-      color: #ffffff;
-      border: none;
-      font-size: 0.88rem;
-      font-weight: 600;
-      cursor: pointer;
-      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
-      transition: all 0.25s ease;
-
-      .logout-icon {
-        font-size: 0.95rem;
-        transition: transform 0.2s ease;
-      }
-
-      &:hover {
-        background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
-        box-shadow: 0 6px 18px rgba(220, 38, 38, 0.45);
-        transform: translateY(-1px);
-
-        .logout-icon {
-          transform: translateX(2px);
-        }
-      }
-
-      &:active {
-        transform: translateY(0);
-        box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
-      }
-    }
+  .marca-texto { display: flex; flex-direction: column; line-height: 1.15; }
+  .marca-nombre { font: 800 18px var(--font-display); letter-spacing: -0.01em; }
+  .marca-sub {
+    margin-top: 3px;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.65;
   }
+}
+
+.enlaces { display: flex; flex-direction: column; gap: 2px; }
+
+.enlace {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #8e959c;
+  font: 500 14.5px var(--font-body);
+  text-decoration: none;
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+
+  svg {
+    width: 18px;
+    height: 18px;
+    flex: none;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  &:hover { color: #e8eaec; }
+
+  &.activo {
+    background: var(--grafito-2);
+    color: #e8eaec;
+    box-shadow: inset 3px 0 0 var(--azafran);
+  }
+}
+
+.relleno { flex: 1; }
+
+.usuario {
+  border-top: 1px solid #2a2f35;
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  .usuario-rol {
+    display: block;
+    padding: 0 12px;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #8e959c;
+  }
+}
+
+@media (max-width: 860px) {
+  .menu-lateral {
+    position: static;
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+    padding: 12px 14px;
+    overflow: visible;
+  }
+  .enlaces { flex-direction: row; flex-wrap: wrap; }
+  .enlace { width: auto; }
+  .relleno { display: none; }
+  .usuario { border: 0; padding: 0; flex-direction: row; align-items: center; }
+  .usuario .usuario-datos { display: none; }
 }

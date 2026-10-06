@@ -48,10 +48,10 @@ public class Caso {
     @Column(name = "es_anonimo", nullable = false)
     private Boolean esAnonimo = false;
 
-    // Se deja como columna simple (sin relacion @ManyToOne a Personal) porque
-    // la asignacion de personal (CU-10) todavia no se implementa en esta fase.
-    @Column(name = "id_personal_asignado")
-    private Integer idPersonalAsignado;
+    // CU-10: responsable asignado.
+    @ManyToOne
+    @JoinColumn(name = "id_personal_asignado")
+    private Personal personalAsignado;
 
     @Column(name = "fecha_creacion", nullable = false)
     private LocalDateTime fechaCreacion = LocalDateTime.now();
@@ -154,12 +154,12 @@ public class Caso {
         this.esAnonimo = esAnonimo;
     }
 
-    public Integer getIdPersonalAsignado() {
-        return idPersonalAsignado;
+    public Personal getPersonalAsignado() {
+        return personalAsignado;
     }
 
-    public void setIdPersonalAsignado(Integer idPersonalAsignado) {
-        this.idPersonalAsignado = idPersonalAsignado;
+    public void setPersonalAsignado(Personal personalAsignado) {
+        this.personalAsignado = personalAsignado;
     }
 
     public LocalDateTime getFechaCreacion() {

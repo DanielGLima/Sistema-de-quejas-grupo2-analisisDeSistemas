@@ -24,6 +24,10 @@ public class HistorialEstadoCasoService {
         return historialEstadoCasoRepository.save(historial);
     }
 
+    public HistorialEstadoCaso guardar(HistorialEstadoCaso historial) {
+        return historialEstadoCasoRepository.save(historial);
+    }
+
     public List<HistorialEstadoCaso> findByCaso(Caso caso) {
         return historialEstadoCasoRepository.findByCasoOrderByFechaCambioDesc(caso);
     }

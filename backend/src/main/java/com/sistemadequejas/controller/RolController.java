@@ -4,17 +4,14 @@ import com.sistemadequejas.model.Rol;
 import com.sistemadequejas.service.RolService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+// Solo lectura. Los roles son un catalogo fijo (Administrador General, Gerente, Operador).
 @RestController
 @RequestMapping("/api/roles")
 public class RolController {
@@ -32,28 +29,5 @@ public class RolController {
         return rolService.findById(id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-    @PostMapping
-    public Rol create(@RequestBody Rol rol) {
-        return rolService.save(rol);
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<Rol> update(@PathVariable Integer id, @RequestBody Rol rol) {
-        if (rolService.findById(id).isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        rol.setIdRol(id);
-        return ResponseEntity.ok(rolService.save(rol));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Integer id) {
-        if (rolService.findById(id).isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        rolService.deleteById(id);
-        return ResponseEntity.noContent().build();
     }
 }

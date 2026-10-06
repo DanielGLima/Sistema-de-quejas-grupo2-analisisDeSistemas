@@ -1,7 +1,7 @@
 .page-wrapper {
   min-height: 100vh;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background: var(--fondo);
+  font-family: var(--font-body);
   padding: 30px 20px;
   box-sizing: border-box;
   display: flex;
@@ -17,22 +17,21 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 24px;
-    background: #ffffff;
-    padding: 20px 28px;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    background: transparent;
+    padding: 0 0 6px;
 
     h2 {
       margin: 0;
-      font-size: 1.35rem;
+      font-size: 1.9rem;
+      font-weight: 800;
       font-weight: 700;
-      color: #0f172a;
+      color: #16191d;
     }
 
     .subtitle {
       margin: 4px 0 0 0;
       font-size: 0.875rem;
-      color: #64748b;
+      color: #5b636b;
     }
 
     .btn-nuevo {
@@ -61,22 +60,22 @@
         display: block;
         font-size: 0.8rem;
         font-weight: 600;
-        color: #334155;
+        color: #2a2f35;
         margin-bottom: 6px;
       }
 
       select, input {
         width: 100%;
         padding: 9px 12px;
-        border: 1px solid #cbd5e1;
+        border: 1px solid #cdd2d8;
         border-radius: 8px;
         font-size: 0.875rem;
-        color: #1e293b;
+        color: #1a1d21;
         outline: none;
         box-sizing: border-box;
 
         &:focus {
-          border-color: #2563eb;
+          border-color: #1a1d21;
         }
       }
     }
@@ -105,33 +104,35 @@
       font-size: 0.875rem;
 
       thead {
-        background-color: #f8fafc;
-        border-bottom: 1px solid #e2e8f0;
+        background-color: #f4f5f7;
+        border-bottom: 1px solid #e1e4e8;
 
         th {
           padding: 14px 16px;
-          color: #475569;
+          color: #4a5159;
           font-weight: 600;
         }
       }
 
       tbody {
         tr {
-          border-bottom: 1px solid #f1f5f9;
+          border-bottom: 1px solid #eceef1;
           transition: background-color 0.15s;
 
           &:hover {
-            background-color: #f8fafc;
+            background-color: #f4f5f7;
           }
 
           td {
             padding: 14px 16px;
-            color: #334155;
+            color: #2a2f35;
           }
 
           .code-col {
+          font-family: var(--font-mono);
+          font-size: 0.8125rem;
             font-weight: 600;
-            color: #0f172a;
+            color: #16191d;
           }
         }
       }
@@ -140,7 +141,7 @@
     .empty-state {
       padding: 40px 20px;
       text-align: center;
-      color: #64748b;
+      color: #5b636b;
       font-size: 0.95rem;
     }
   }
@@ -150,7 +151,7 @@
     margin-top: 20px;
 
     .back-link {
-      color: #cbd5e1;
+      color: #cdd2d8;
       font-size: 0.875rem;
       text-decoration: none;
 
@@ -170,33 +171,34 @@
 }
 
 .badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--tinta);
+  font-size: 0.8125rem;
   font-weight: 600;
+  white-space: nowrap;
 
-  &-pendiente {
-    background-color: #fef3c7;
-    color: #92400e;
+  &::before {
+    content: '';
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--dot, #8e959c);
+    flex: none;
   }
-  &-proceso {
-    background-color: #e0f2fe;
-    color: #0369a1;
-  }
-  &-resuelto {
-    background-color: #dcfce7;
-    color: #15803d;
-  }
-  &-rechazado {
-    background-color: #fee2e2;
-    color: #b91c1c;
-  }
-  &-cancelado {
-    background-color: #f1f5f9;
-    color: #64748b;
-    border: 1px solid #cbd5e1;
-  }
+
+  &-pendiente { --dot: #e7a21b; }
+  &-proceso { --dot: #2f6fde; }
+  &-resuelto { --dot: #2e9b5b; }
+  &-cerrado { --dot: #5b6573; }
+  &-reapertura { --dot: #d8442b; }
+  &-rechazado { --dot: #d8442b; }
+  &-cancelado { --dot: #8e959c; }
+  &-default { --dot: #8e959c; }
 }
 
 /* Insignia de caso ya evaluado (CU-08 / FA01) */
@@ -220,25 +222,25 @@
   transition: all 0.2s;
 
   &-primary {
-    background-color: #1e293b;
+    background-color: #1a1d21;
     color: #ffffff;
 
     &:hover {
-      background-color: #0f172a;
+      background-color: #16191d;
     }
 
     &:disabled {
-      background-color: #94a3b8;
+      background-color: #8e959c;
       cursor: not-allowed;
     }
   }
 
   &-secondary {
-    background-color: #f1f5f9;
-    color: #475569;
+    background-color: #eceef1;
+    color: #4a5159;
 
     &:hover {
-      background-color: #e2e8f0;
+      background-color: #e1e4e8;
     }
   }
 
@@ -251,6 +253,20 @@
     }
   }
 
+  &-warning {
+    background-color: #f59e0b;
+    color: #ffffff;
+
+    &:hover {
+      background-color: #d97706;
+    }
+
+    &:disabled {
+      background-color: #fcd34d;
+      cursor: not-allowed;
+    }
+  }
+
   &-sm {
     padding: 6px 12px;
     font-size: 0.8rem;
@@ -258,9 +274,9 @@
 }
 
 .btn-action {
-  background-color: #eff6ff;
-  color: #2563eb;
-  border: 1px solid #bfdbfe;
+  background-color: #eef2f8;
+  color: #1a1d21;
+  border: 1px solid #c9d6ea;
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 0.8rem;
@@ -269,7 +285,7 @@
   transition: all 0.2s;
 
   &:hover {
-    background-color: #2563eb;
+    background-color: #1a1d21;
     color: #ffffff;
   }
 }
@@ -310,6 +326,24 @@
   }
 }
 
+/* Botón Reabrir en la tabla (CU-09) */
+.btn-reapertura {
+  background-color: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: #f59e0b;
+    color: #ffffff;
+  }
+}
+
 /* Botón Evaluar dentro del modal de detalle */
 .btn-evaluar-primary {
   background-color: #0d9488;
@@ -327,7 +361,7 @@
   }
 }
 
-/* Alertas para el modal de evaluación */
+/* Alertas para los modales */
 .alert {
   padding: 10px 14px;
   border-radius: 8px;
@@ -355,7 +389,7 @@
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(15, 23, 42, 0.6);
+  background-color: rgba(22, 25, 29, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -376,13 +410,14 @@
       max-width: 480px;
     }
 
-    &.modal-evaluar-card {
-      max-width: 480px;
+    &.modal-evaluar-card,
+    &.modal-reapertura-card {
+      max-width: 520px;
     }
 
     .modal-header {
       padding: 16px 22px;
-      border-bottom: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e1e4e8;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -390,7 +425,7 @@
       h3 {
         margin: 0;
         font-size: 1.15rem;
-        color: #0f172a;
+        color: #16191d;
       }
 
       .btn-close {
@@ -398,7 +433,7 @@
         border: none;
         font-size: 1.1rem;
         cursor: pointer;
-        color: #64748b;
+        color: #5b636b;
       }
     }
 
@@ -408,27 +443,27 @@
       .modal-case-ref {
         margin: 0 0 16px 0;
         font-size: 0.875rem;
-        color: #475569;
+        color: #4a5159;
 
         strong {
-          color: #0f172a;
+          color: #16191d;
         }
       }
 
       .confirm-message {
         margin: 0 0 16px 0;
         font-size: 0.9rem;
-        color: #475569;
+        color: #4a5159;
         line-height: 1.45;
       }
 
       .detail-row {
         margin-bottom: 10px;
         font-size: 0.875rem;
-        color: #334155;
+        color: #2a2f35;
 
         strong {
-          color: #0f172a;
+          color: #16191d;
           margin-right: 6px;
         }
       }
@@ -439,17 +474,17 @@
         strong {
           display: block;
           font-size: 0.85rem;
-          color: #0f172a;
+          color: #16191d;
           margin-bottom: 4px;
         }
 
         .box-text {
-          background-color: #f8fafc;
-          border: 1px solid #e2e8f0;
+          background-color: #f4f5f7;
+          border: 1px solid #e1e4e8;
           padding: 10px 12px;
           border-radius: 6px;
           font-size: 0.85rem;
-          color: #475569;
+          color: #4a5159;
           margin: 0;
 
           &.response {
@@ -475,15 +510,25 @@
 
             .comment-text {
               margin: 0;
-              color: #475569;
+              color: #4a5159;
               font-size: 0.825rem;
+            }
+          }
+
+          &.reapertura-box {
+            background-color: #fffbeb;
+            border-left: 4px solid #f59e0b;
+            padding: 10px 12px;
+            p {
+              margin: 4px 0;
+              color: #4a5159;
             }
           }
         }
 
         .file-tag {
           font-size: 0.85rem;
-          color: #2563eb;
+          color: #1a1d21;
           font-weight: 500;
         }
       }
@@ -496,7 +541,7 @@
         label {
           font-size: 0.825rem;
           font-weight: 600;
-          color: #334155;
+          color: #2a2f35;
           margin-bottom: 6px;
         }
 
@@ -504,11 +549,11 @@
           width: 100%;
           box-sizing: border-box;
           padding: 10px 12px;
-          border: 1px solid #cbd5e1;
+          border: 1px solid #cdd2d8;
           border-radius: 8px;
           font-family: inherit;
           font-size: 0.875rem;
-          color: #1e293b;
+          color: #1a1d21;
           outline: none;
           resize: vertical;
           min-height: 80px;
@@ -526,7 +571,7 @@
         }
       }
 
-      /* Formulario de Evaluación (CU-08) */
+      /* Formularios CU-08 y CU-09 */
       .form-group-eval {
         margin-bottom: 16px;
 
@@ -534,7 +579,7 @@
           display: block;
           font-size: 0.825rem;
           font-weight: 600;
-          color: #334155;
+          color: #2a2f35;
           margin-bottom: 6px;
         }
 
@@ -546,7 +591,7 @@
           .star-icon {
             font-size: 2.2rem;
             line-height: 1;
-            color: #cbd5e1;
+            color: #cdd2d8;
             cursor: pointer;
             user-select: none;
             transition: color 0.15s ease-in-out, transform 0.15s ease-in-out;
@@ -566,27 +611,59 @@
           width: 100%;
           box-sizing: border-box;
           padding: 10px 12px;
-          border: 1px solid #cbd5e1;
+          border: 1px solid #cdd2d8;
           border-radius: 8px;
           font-family: inherit;
           font-size: 0.875rem;
-          color: #1e293b;
+          color: #1a1d21;
           outline: none;
           resize: vertical;
           min-height: 90px;
           transition: border-color 0.2s;
 
           &:focus {
-            border-color: #2563eb;
+            border-color: #1a1d21;
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
           }
+        }
+
+        input[type="file"] {
+          display: block;
+          width: 100%;
+          font-size: 0.85rem;
+          color: #4a5159;
+          margin-top: 4px;
+
+          &::file-selector-button {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid #cdd2d8;
+            background-color: #f4f5f7;
+            color: #2a2f35;
+            font-weight: 500;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+
+            &:hover {
+              background-color: #e1e4e8;
+            }
+          }
+        }
+
+        .file-selected {
+          display: block;
+          margin-top: 6px;
+          font-size: 0.8rem;
+          color: #1a1d21;
+          font-weight: 500;
         }
 
         .char-counter {
           display: block;
           text-align: right;
           font-size: 0.75rem;
-          color: #94a3b8;
+          color: #8e959c;
           margin-top: 4px;
         }
       }
@@ -594,7 +671,7 @@
 
     .modal-footer {
       padding: 12px 22px;
-      border-top: 1px solid #e2e8f0;
+      border-top: 1px solid #e1e4e8;
       display: flex;
       justify-content: flex-end;
       gap: 10px;

@@ -4,11 +4,14 @@
     
     <!-- Encabezado institucional -->
     <div class="header-section">
-      <h2>Restaurante Las Delicias</h2>
-      <p class="subtitle">Consultar Estado de Casos</p>
+      <h2>Mis casos</h2>
+      <p class="subtitle">Consultar estado de casos</p>
     </div>
 
-    <!-- Filtros de búsqueda (Paso 4) -->
+    <div *ngIf="mensajeAccion" class="alert alert-success" (click)="mensajeAccion = ''">✅ {{ mensajeAccion }}</div>
+    <div *ngIf="errorAccion" class="alert alert-danger" (click)="errorAccion = ''">⚠️ {{ errorAccion }}</div>
+
+    <!-- Filtros de búsqueda -->
     <div class="filters-card">
       <div class="filters-grid">
         <div class="filter-item">
@@ -43,7 +46,7 @@
       </div>
     </div>
 
-    <!-- Listado de Casos (Paso 5) -->
+    <!-- Listado de Casos -->
     <div class="table-card">
       <div class="table-responsive" *ngIf="casosFiltrados.length > 0; else sinCasos">
         <table class="casos-table">
@@ -52,7 +55,7 @@
               <th>No. Caso</th>
               <th>tipo de caso</th>
               <th>sucursal</th>
-              <th>motivo</th>
+              
               <th>fecha de registro</th>
               <th>estado</th>
               <th>acción</th>
@@ -63,8 +66,7 @@
               <td class="code-col">{{ caso.id }}</td>
               <td>{{ caso.tipoCaso }}</td>
               <td>{{ caso.sucursal }}</td>
-              <td>{{ caso.motivo }}</td>
-              <td>{{ caso.fechaCreacion }}</td>
+              <td>{{ caso.fechaCreacion | date:'dd/MM/yyyy' }}</td>
               <td>
                 <span class="badge" [ngClass]="obtenerClaseEstado(caso.estado)">
                   {{ caso.estado }}
@@ -76,16 +78,11 @@
                     Ver Detalle
                   </button>
 
-                  <!-- CU-07: Botón visible solo si el caso se puede cancelar -->
+                  <!-- CU-07: Cancelar si está pendiente -->
                   <button 
-                    *ngIf="puedeCancelar(caso)" 
-                    type="button" 
-                    class="btn-cancel" 
-                    (click)="abrirModalCancelar(caso)">
-                    Cancelar
-                  </button>
+                    *ngIf="mostrarOpcionCancelar(caso)" type="button" class="btn-cancel" (click)="abrirModalCancelar(caso)"> Cancelar caso </button>
 
-                  <!-- CU-08: Botón visible si está Resuelto/Cerrado y sin evaluar -->
+                  <!-- CU-08: Evaluar si está resuelto/cerrado -->
                   <button 
                     *ngIf="puedeEvaluar(caso)" 
                     type="button" 
@@ -94,7 +91,16 @@
                     Evaluar
                   </button>
 
-                  <!-- CU-08 / FA01: Insignia si ya fue calificado -->
+                  <!-- CU-09: Solicitar Reapertura si está Cerrado -->
+                  <button 
+                    *ngIf="puedeSolicitarReapertura(caso)" 
+                    type="button" 
+                    class="btn-reapertura" 
+                    (click)="abrirModalReapertura(caso)">
+                    Reabrir Caso
+                  </button>
+
+                  <!-- Insignia si ya fue calificado -->
                   <span *ngIf="caso.evaluacion" class="badge-evaluado" title="Caso ya evaluado">
                     ★ {{ caso.evaluacion.calificacion }}/5
                   </span>
@@ -105,10 +111,16 @@
         </table>
       </div>
 
-      <!-- FA01: Sin registros -->
       <ng-template #sinCasos>
         <div class="empty-state">
-          <p>No se encontraron casos registrados con los criterios seleccionados.</p>
+          <!-- CU-06, FA01: el usuario no tiene casos registrados -->
+          <ng-container *ngIf="casos.length === 0; else sinResultadosFiltro">
+            <p>No cuenta con casos registrados en el sistema</p>
+            <a routerLink="/registrar-caso" class="btn btn-primary">Registrar un nuevo caso</a>
+          </ng-container>
+          <ng-template #sinResultadosFiltro>
+            <p>No se encontraron casos con los criterios seleccionados.</p>
+          </ng-template>
         </div>
       </ng-template>
     </div>
@@ -135,7 +147,10 @@
         <strong>motivo:</strong> <span>{{ casoSeleccionado.motivo }}</span>
       </div>
       <div class="detail-row">
-        <strong>fecha del incidente:</strong> <span>{{ casoSeleccionado.fechaIncidente }}</span>
+        <strong>fecha de registro:</strong> <span>{{ casoSeleccionado.fechaCreacion | date:'dd/MM/yyyy HH:mm' }}</span>
+      </div>
+      <div class="detail-row" *ngIf="casoSeleccionado.fechaCierre">
+        <strong>fecha de cierre:</strong> <span>{{ casoSeleccionado.fechaCierre | date:'dd/MM/yyyy HH:mm' }}</span>
       </div>
       <div class="detail-row">
         <strong>estado:</strong> 
@@ -149,23 +164,32 @@
         <p class="box-text">{{ casoSeleccionado.detalle }}</p>
       </div>
 
-      <div class="detail-block" *ngIf="casoSeleccionado.archivoEvidencia">
-        <strong>evidencia adjunta:</strong>
-        <span class="file-tag">📎 {{ casoSeleccionado.archivoEvidencia }}</span>
+      <div class="detail-block" *ngIf="casoSeleccionado.evidencias && casoSeleccionado.evidencias.length">
+        <strong>evidencias adjuntas:</strong>
+        <div>
+          <a *ngFor="let ev of casoSeleccionado.evidencias" class="file-tag" [href]="ev.url" target="_blank" rel="noopener">📎 {{ ev.nombre }}</a>
+        </div>
       </div>
 
       <div class="detail-block" *ngIf="casoSeleccionado.respuesta">
-        <strong>respuesta:</strong>
+        <strong>respuestas:</strong>
         <p class="box-text response">{{ casoSeleccionado.respuesta }}</p>
       </div>
 
-      <!-- Detalle del motivo si fue cancelado (CU-07) -->
+      <div class="detail-block" *ngIf="casoSeleccionado.historial && casoSeleccionado.historial.length">
+        <strong>historial de cambios de estado:</strong>
+        <ul class="historial-estados">
+          <li *ngFor="let h of casoSeleccionado.historial">
+            {{ h.fecha | date:'dd/MM/yyyy HH:mm' }} — <strong>{{ h.estado }}</strong><span *ngIf="h.observacion"> ({{ h.observacion }})</span>
+          </li>
+        </ul>
+      </div>
+
       <div class="detail-block" *ngIf="casoSeleccionado.motivoCancelacion">
         <strong>motivo de cancelación:</strong>
         <p class="box-text cancel-text">{{ casoSeleccionado.motivoCancelacion }}</p>
       </div>
 
-      <!-- Detalle de la evaluación registrada (CU-08 / FA01) -->
       <div class="detail-block" *ngIf="casoSeleccionado.evaluacion">
         <strong>evaluación del servicio:</strong>
         <div class="box-text evaluation-box">
@@ -177,19 +201,22 @@
           </p>
         </div>
       </div>
+
+      <div class="detail-block" *ngIf="casoSeleccionado.reapertura">
+        <strong>solicitud de reapertura:</strong>
+        <div class="box-text reapertura-box">
+          <p><strong>Motivo:</strong> {{ casoSeleccionado.reapertura.motivo }}</p>
+          <p *ngIf="casoSeleccionado.reapertura.archivoEvidencia">
+            <strong>Evidencia adjunta:</strong> 📎 {{ casoSeleccionado.reapertura.archivoEvidencia }}
+          </p>
+        </div>
+      </div>
     </div>
 
     <div class="modal-footer">
-      <!-- CU-07: Cancelar desde detalle -->
       <button 
-        *ngIf="puedeCancelar(casoSeleccionado)" 
-        type="button" 
-        class="btn btn-danger" 
-        (click)="cerrarModal(); abrirModalCancelar(casoSeleccionado)">
-        Cancelar Caso
-      </button>
+        *ngIf="mostrarOpcionCancelar(casoSeleccionado)" type="button" class="btn btn-danger" (click)="abrirModalCancelar(casoSeleccionado)"> Cancelar caso </button>
 
-      <!-- CU-08: Evaluar desde detalle -->
       <button 
         *ngIf="puedeEvaluar(casoSeleccionado)" 
         type="button" 
@@ -197,6 +224,13 @@
         (click)="cerrarModal(); abrirModalEvaluar(casoSeleccionado)">
         Evaluar atención
       </button>
+
+      <button 
+        *ngIf="puedeSolicitarReapertura(casoSeleccionado)" 
+        type="button" 
+        class="btn btn-warning" 
+        (click)="cerrarModal(); abrirModalReapertura(casoSeleccionado)">
+        Solicitar reapertura </button>
 
       <button type="button" class="btn btn-secondary" (click)="cerrarModal()">Cerrar</button>
     </div>
@@ -213,16 +247,12 @@
 
     <div class="modal-body">
       <p class="confirm-message">
-        ¿Está seguro que desea cancelar este caso? Esta acción registrará la anulación y no podrá ser revertida.
+        ¿Está seguro que desea cancelar este caso?
       </p>
 
       <div class="form-group-cancel">
-        <label for="motivoCancel">Motivo de la cancelación (*):</label>
-        <textarea 
-          id="motivoCancel" 
-          rows="3" 
-          [(ngModel)]="motivoCancelacion" 
-          placeholder="Ingrese el motivo de la cancelación (mínimo 10 caracteres)...">
+        <label for="motivoCancel">Motivo de cancelación (opcional, máximo 250 caracteres):</label>
+        <textarea id="motivoCancel" rows="3" maxlength="250" [(ngModel)]="motivoCancelacion" placeholder="Ingrese el motivo de la cancelación...">
         </textarea>
         <small class="error-msg" *ngIf="errorMotivoCancelacion">
           {{ errorMotivoCancelacion }}
@@ -231,8 +261,8 @@
     </div>
 
     <div class="modal-footer">
-      <button type="button" class="btn btn-secondary" (click)="cerrarModalCancelar()">Volver</button>
-      <button type="button" class="btn btn-danger" (click)="confirmarCancelacion()">Confirmar Cancelación</button>
+      <button type="button" class="btn btn-secondary" (click)="declinarCancelacion()">No</button>
+      <button type="button" class="btn btn-danger" (click)="confirmarCancelacion()">Sí</button>
     </div>
   </div>
 </div>
@@ -250,7 +280,6 @@
         Caso No: <strong>{{ casoSeleccionado.id }}</strong> — {{ casoSeleccionado.motivo }}
       </p>
 
-      <!-- Mensajes de Error y Éxito -->
       <div *ngIf="mensajeErrorEvaluar" class="alert alert-danger">
         <span>{{ mensajeErrorEvaluar }}</span>
       </div>
@@ -260,7 +289,6 @@
       </div>
 
       <form [formGroup]="evaluacionForm" (ngSubmit)="enviarEvaluacion()">
-        <!-- Calificación Cuantitativa (1 a 5 Estrellas) -->
         <div class="form-group-eval">
           <label>Calificación cuantitativa (*):</label>
           <div class="stars-selector">
@@ -274,7 +302,6 @@
           </div>
         </div>
 
-        <!-- Comentarios y retroalimentación -->
         <div class="form-group-eval">
           <label for="comentariosEval">Comentarios y retroalimentación (Opcional):</label>
           <textarea 
@@ -298,6 +325,73 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal CU-09: Solicitar Reapertura de Caso -->
+<div *ngIf="mostrarModalReapertura && casoSeleccionado" class="modal-backdrop">
+  <div class="modal-card modal-reapertura-card">
+    <div class="modal-header">
+      <h3>Solicitar Reapertura de Caso</h3>
+      <button class="btn-close" (click)="cerrarModalReapertura()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <p class="modal-case-ref">
+        Caso No: <strong>{{ casoSeleccionado.id }}</strong> — {{ casoSeleccionado.tipoCaso }} ({{ casoSeleccionado.sucursal }})
+      </p>
+
+      <div *ngIf="mensajeErrorReapertura" class="alert alert-danger">
+        <span>{{ mensajeErrorReapertura }}</span>
+      </div>
+
+      <div *ngIf="mensajeExitoReapertura" class="alert alert-success">
+        <span>{{ mensajeExitoReapertura }}</span>
+      </div>
+
+      <form [formGroup]="reaperturaForm" (ngSubmit)="enviarSolicitudReapertura()" *ngIf="!estaPlazoReaperturaVencido(casoSeleccionado)">
+        <div class="form-group-eval">
+          <label for="motivoReapertura">Motivo detallado de reapertura (*):</label>
+          <textarea 
+            id="motivoReapertura"
+            rows="4"
+            formControlName="motivo"
+            maxlength="500"
+            placeholder="Explique detalladamente por qué considera que la solución no resolvió satisfactoriamente el caso (mínimo 10 caracteres)...">
+          </textarea>
+          <div class="char-counter">
+            {{ reaperturaForm.get('motivo')?.value?.length || 0 }} / 500 caracteres
+          </div>
+        </div>
+
+        <div class="form-group-eval">
+          <label for="evidenciaReapertura">Evidencias o documentos de respaldo (Opcional - JPG, PNG o PDF, máx 2 MB):</label>
+          <input 
+            type="file" 
+            id="evidenciaReapertura" 
+            accept=".jpg,.jpeg,.png,.pdf"
+            (change)="onArchivoReaperturaSeleccionado($event)" />
+          <small class="file-selected" *ngIf="archivoReaperturaNombre">
+            Archivo seleccionado: {{ archivoReaperturaNombre }}
+          </small>
+        </div>
+
+        <div class="modal-footer modal-footer-eval">
+          <button type="button" class="btn btn-secondary" (click)="cerrarModalReapertura()">
+            Cancelar
+          </button>
+          <button type="submit" class="btn btn-warning" [disabled]="!!mensajeExitoReapertura">
+            Enviar solicitud
+          </button>
+        </div>
+      </form>
+
+      <div *ngIf="estaPlazoReaperturaVencido(casoSeleccionado)" class="modal-footer modal-footer-eval">
+        <button type="button" class="btn btn-secondary" (click)="cerrarModalReapertura()">
+          Entendido
+        </button>
+      </div>
     </div>
   </div>
 </div>

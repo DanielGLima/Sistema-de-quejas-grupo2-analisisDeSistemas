@@ -5,11 +5,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.stereotype.Service;
 
 // Envio de correo generico, reutilizable para CU-02 (codigo de recuperacion),
-// CU-05 (confirmacion de caso) y, mas adelante, CU-14 (notificaciones).
+// CU-05 (confirmacion de caso) y CU-14 (notificaciones).
 @Service
 public class EmailService {
 
@@ -21,12 +24,31 @@ public class EmailService {
     @Value("${spring.mail.username:}")
     private String remitente;
 
-    public void enviar(String destinatario, String asunto, String cuerpo) {
-        if (remitente == null || remitente.isBlank()) {
-            // Sin credenciales configuradas (MAIL_USERNAME/MAIL_PASSWORD): no se
-            // bloquea la operacion que disparo el correo, solo se deja constancia.
-            log.warn("Envio de correo omitido (no hay MAIL_USERNAME configurado). Destinatario: {}, asunto: {}", destinatario, asunto);
+    // Al arrancar deja en el log si el SMTP esta bien configurado y si el servidor acepta la conexion.
+    @EventListener(ApplicationReadyEvent.class)
+    public void verificarConexion() {
+        if (!estaConfigurado()) {
+            log.warn("SMTP NO configurado: defina MAIL_USERNAME y MAIL_PASSWORD (contrasena de aplicacion de Gmail). No se enviaran correos.");
             return;
+        }
+        try {
+            ((JavaMailSenderImpl) mailSender).testConnection();
+            log.info("SMTP OK: conexion y autenticacion correctas con el servidor de correo (remitente {}).", remitente);
+        } catch (Exception e) {
+            log.error("SMTP con ERROR: no se pudo conectar/autenticar con el servidor de correo: {}", e.getMessage());
+        }
+    }
+
+    public boolean estaConfigurado() {
+        return remitente != null && !remitente.isBlank();
+    }
+
+    // Devuelve true solo si el correo realmente salio hacia el servidor SMTP.
+    // Nunca lanza excepcion: un fallo de envio no debe bloquear la operacion original (CU-14, FA01).
+    public boolean enviar(String destinatario, String asunto, String cuerpo) {
+        if (!estaConfigurado()) {
+            log.warn("Envio de correo omitido (no hay MAIL_USERNAME configurado). Destinatario: {}, asunto: {}", destinatario, asunto);
+            return false;
         }
 
         try {
@@ -36,9 +58,10 @@ public class EmailService {
             mensaje.setSubject(asunto);
             mensaje.setText(cuerpo);
             mailSender.send(mensaje);
+            return true;
         } catch (Exception e) {
-            // CU-14, FA01: un fallo de envio no debe bloquear la operacion original.
             log.error("No se pudo enviar el correo a {}: {}", destinatario, e.getMessage());
+            return false;
         }
     }
 }

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+// Solo lectura publica (categorias activas). La administracion es CU-13 (/api/admin/catalogos).
 @RestController
 @RequestMapping("/api/categorias-caso")
 @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
@@ -20,7 +21,7 @@ public class CategoriaCasoController {
 
     @GetMapping
     public List<CategoriaCaso> findAll() {
-        return categoriaCasoService.findAll();
+        return categoriaCasoService.findAll().stream().filter(c -> Boolean.TRUE.equals(c.getActivo())).toList();
     }
 
     @GetMapping("/{id}")
@@ -28,28 +29,5 @@ public class CategoriaCasoController {
         return categoriaCasoService.findById(id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-    @PostMapping
-    public CategoriaCaso create(@RequestBody CategoriaCaso categoriaCaso) {
-        return categoriaCasoService.save(categoriaCaso);
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<CategoriaCaso> update(@PathVariable Integer id, @RequestBody CategoriaCaso categoriaCaso) {
-        if (categoriaCasoService.findById(id).isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        categoriaCaso.setIdCategoria(id);
-        return ResponseEntity.ok(categoriaCasoService.save(categoriaCaso));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Integer id) {
-        if (categoriaCasoService.findById(id).isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        categoriaCasoService.deleteById(id);
-        return ResponseEntity.noContent().build();
     }
 }

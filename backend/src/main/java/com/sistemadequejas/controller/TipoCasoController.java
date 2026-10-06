@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+// Solo lectura publica (tipos activos). La administracion es CU-13 (/api/admin/catalogos).
 @RestController
 @RequestMapping("/api/tipos-caso")
 @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
@@ -19,7 +20,7 @@ public class TipoCasoController {
 
     @GetMapping
     public List<TipoCaso> findAll() {
-        return tipoCasoService.findAll();
+        return tipoCasoService.findAll().stream().filter(t -> Boolean.TRUE.equals(t.getActivo())).toList();
     }
 
     @GetMapping("/{id}")
@@ -27,28 +28,5 @@ public class TipoCasoController {
         return tipoCasoService.findById(id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-    @PostMapping
-    public TipoCaso create(@RequestBody TipoCaso tipoCaso) {
-        return tipoCasoService.save(tipoCaso);
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<TipoCaso> update(@PathVariable Integer id, @RequestBody TipoCaso tipoCaso) {
-        if (tipoCasoService.findById(id).isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        tipoCaso.setIdTipoCaso(id);
-        return ResponseEntity.ok(tipoCasoService.save(tipoCaso));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Integer id) {
-        if (tipoCasoService.findById(id).isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        tipoCasoService.deleteById(id);
-        return ResponseEntity.noContent().build();
     }
 }

@@ -204,6 +204,31 @@ CREATE TABLE IF NOT EXISTS respuesta_caso (
 
 CREATE INDEX IF NOT EXISTS idx_respuesta_caso ON respuesta_caso (id_caso);
 
+-- reapertura_caso (CU-09 Solicitar Reapertura de Caso)
+CREATE TABLE IF NOT EXISTS reapertura_caso (
+    id_reapertura     SERIAL PRIMARY KEY,
+    id_caso           INTEGER NOT NULL REFERENCES caso (id_caso),
+    motivo            VARCHAR(500) NOT NULL,
+    url_evidencia     VARCHAR(500),
+    fecha_solicitud   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_reapertura_motivo_min CHECK (char_length(motivo) >= 10)
+);
+
+CREATE INDEX IF NOT EXISTS idx_reapertura_caso ON reapertura_caso (id_caso);
+
+-- reasignacion_caso (CU-10): historial de cambios de responsable
+CREATE TABLE IF NOT EXISTS reasignacion_caso (
+    id_reasignacion        SERIAL PRIMARY KEY,
+    id_caso                INTEGER NOT NULL REFERENCES caso (id_caso),
+    id_personal_anterior   INTEGER REFERENCES personal (id_personal),
+    id_personal_nuevo      INTEGER NOT NULL REFERENCES personal (id_personal),
+    id_personal_ejecutor   INTEGER NOT NULL REFERENCES personal (id_personal),
+    motivo                 VARCHAR(300) NOT NULL,
+    fecha_reasignacion     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_reasignacion_caso ON reasignacion_caso (id_caso);
+
 -- evaluacion_caso (CU-08 Evaluar Atencion del Caso) - un caso, una evaluacion
 CREATE TABLE IF NOT EXISTS evaluacion_caso (
     id_evaluacion    SERIAL PRIMARY KEY,
@@ -243,6 +268,7 @@ CREATE TABLE IF NOT EXISTS notificacion (
     asunto               VARCHAR(100) NOT NULL,
     contenido            VARCHAR(500) NOT NULL,
     estado_envio         VARCHAR(30) NOT NULL DEFAULT 'Pendiente',
+    reintentos           INTEGER NOT NULL DEFAULT 0,
     fecha_envio          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_notificacion_destinatario CHECK (id_usuario IS NOT NULL OR id_personal IS NOT NULL)
 );

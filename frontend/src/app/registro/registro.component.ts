@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../services/auth.service';
+import { NACIONALIDADES } from '../core/nacionalidades';
 
 // Formato exigido por CU-01: correo con @ y dominio con al menos un punto.
 const PATRON_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -26,10 +27,7 @@ export class RegistroComponent implements OnInit {
 
   // CU-01: catalogo de nacionalidad (el documento de casos de uso no definio
   // valores concretos, asi que se deja como lista fija en el frontend).
-  listaNacionalidades: string[] = [
-    'Guatemalteca', 'Mexicana', 'Salvadoreña', 'Hondureña', 'Nicaragüense',
-    'Costarricense', 'Panameña', 'Colombiana', 'Estadounidense', 'Otra'
-  ];
+  listaNacionalidades: string[] = NACIONALIDADES;
 
   // Control de flujo en dos pasos (Datos -> Contraseña)
   pasoPassword: boolean = false;
@@ -134,7 +132,6 @@ export class RegistroComponent implements OnInit {
   habilitarPassword(): void {
     this.limpiarMensajes();
 
-    // Validar solo los campos de la primera sección
     const camposPaso1 = ['nombreCompleto', 'fechaNacimiento', 'nacionalidad', 'correoElectronico', 'codigoArea', 'telefono', 'direccion'];
     let formInvalido = false;
 
@@ -178,13 +175,15 @@ export class RegistroComponent implements OnInit {
       this.registroForm.markAllAsTouched();
 
       const passwordControl = this.registroForm.get('password');
-      if (this.registroForm.hasError('noCoincide')) {
-        this.mensajeError = 'Las contraseñas no coinciden';
+      if (passwordControl?.hasError('required') || passwordControl?.hasError('minlength') || passwordControl?.hasError('maxlength')) {
+        this.mensajeError = 'La contraseña debe tener entre 6 y 20 caracteres';
       } else if (passwordControl?.hasError('pattern')) {
         // FA02: Formato de la contraseña no válido
         this.mensajeError = 'El formato de la contraseña debe incluir al menos una letra mayúscula, un carácter especial y un número';
+      } else if (this.registroForm.hasError('noCoincide')) {
+        this.mensajeError = 'Las contraseñas ingresadas no coinciden';
       } else {
-        this.mensajeError = 'Debe completar todos los campos obligatorios con el formato correcto';
+        this.mensajeError = 'Debe completar todos los datos personales obligatorios antes de continuar';
       }
       return;
     }
@@ -192,6 +191,7 @@ export class RegistroComponent implements OnInit {
     this.mostrarModalConfirmacion = true;
   }
 
+  // 3. Envío real a Spring Boot (RegistroRequest)
   confirmarRegistro(acepta: boolean): void {
     this.mostrarModalConfirmacion = false;
 
