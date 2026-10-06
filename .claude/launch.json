@@ -3,9 +3,10 @@
   "configurations": [
     {
       "name": "frontend",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "frontend", "start"],
-      "port": 4200
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "npm --prefix frontend start -- --port %PORT%"],
+      "port": 4200,
+      "autoPort": true
     }
   ]
 }
