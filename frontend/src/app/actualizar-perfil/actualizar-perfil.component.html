@@ -1,4 +1,5 @@
 <app-navbar></app-navbar>
+
 <div class="page-wrapper">
   <div class="perfil-card">
     <div class="brand-header">
@@ -6,20 +7,17 @@
       <p class="subtitle">Consulte y actualice sus datos personales</p>
     </div>
 
-    <!-- Mensajes de estado -->
-    <div *ngIf="mensajeError" class="alert alert-danger">
+    <!-- Mensajes de estado (FA19, FA20, FA21) -->
+    <div *ngIf="mensajeError" class="alert alert-danger" role="alert">
       <span>{{ mensajeError }}</span>
     </div>
 
-    <div *ngIf="mensajeExito" class="alert alert-success">
-      <span>✅ {{ mensajeExito }}</span>
+    <!-- Paso 8: Mensaje de éxito -->
+    <div *ngIf="mensajeExito" class="alert alert-success" role="status">
+      <span>{{ mensajeExito }}</span>
     </div>
 
-    <div *ngIf="mensajeInfo" class="alert alert-info">
-      <span>ℹ️ {{ mensajeInfo }}</span>
-    </div>
-
-    <form *ngIf="!cargando" [formGroup]="perfilForm" (ngSubmit)="guardarCambios()">
+    <form *ngIf="!cargando" [formGroup]="perfilForm" (ngSubmit)="guardarCambios()" novalidate>
       <!-- nombre completo -->
       <div class="form-group">
         <label for="nombreCompleto">nombre completo</label>
@@ -40,7 +38,7 @@
             id="fechaNacimiento"
             type="text"
             maxlength="10"
-            placeholder="dd/mm/aaaa"
+            placeholder="DD/MM/AAAA"
             formControlName="fechaNacimiento"
             (input)="formatearFecha($event)"
           />
@@ -81,15 +79,15 @@
           />
         </div>
 
-        <!-- teléfono -->
+        <!-- número de teléfono -->
         <div class="form-group">
-          <label for="numero de telefono">teléfono</label>
+          <label for="telefono">número de teléfono</label>
           <input
             id="telefono"
             type="text"
             inputmode="numeric"
             maxlength="8"
-            placeholder="Ej: 55443322"
+            placeholder="12345678"
             formControlName="telefono"
             (input)="soloNumeros($event, 'telefono')"
           />
@@ -105,10 +103,14 @@
           maxlength="150"
           formControlName="direccion"
         />
-        <small class="help-text">Llenar unicamente si cambiara contraseña</small>
       </div>
 
-      <!-- FA01: cambio de contraseña, opcional -->
+      <!-- Sección de Seguridad / Cambio de contraseña opcional -->
+      <div class="divider">
+        <span>Seguridad de la cuenta</span>
+      </div>
+      <p class="section-hint">Llenar únicamente si desea cambiar su contraseña</p>
+
       <div class="form-row">
         <div class="form-group">
           <label for="passwordActual">contraseña actual</label>
@@ -117,26 +119,27 @@
             type="password"
             maxlength="20"
             formControlName="passwordActual"
+            autocomplete="current-password"
           />
         </div>
 
         <div class="form-group">
-          <label for="passwordNueva">contraseña nueva</label>
+          <label for="passwordNueva">nueva contraseña</label>
           <input
             id="passwordNueva"
             type="password"
             maxlength="20"
-            placeholder=""
+            placeholder="Mínimo 6 y máximo 20 caracteres"
             formControlName="passwordNueva"
+            autocomplete="new-password"
           />
         </div>
       </div>
 
-      <!-- Botón de acción principal -->
-      <button type="submit" class="btn btn-primary">
-        Guardar cambios
+      <!-- Paso 4: Botón Guardar cambios -->
+      <button type="submit" class="btn btn-primary" [disabled]="guardando">
+        {{ guardando ? 'Guardando...' : 'Guardar cambios' }}
       </button>
     </form>
-
   </div>
 </div>

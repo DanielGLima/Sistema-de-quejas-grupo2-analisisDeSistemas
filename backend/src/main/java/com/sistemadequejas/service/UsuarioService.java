@@ -46,33 +46,33 @@ public class UsuarioService {
         }
     }
 
-    // CU-01 FA01 / CU-03 FA03: valida los datos personales; devuelve el nombre del primer campo invalido o null.
-    private String primerCampoInvalido(Usuario u) {
-        if (u.getNombreCompleto() == null || u.getNombreCompleto().isBlank() || u.getNombreCompleto().length() > 100
-                || !PATRON_SOLO_LETRAS.matcher(u.getNombreCompleto()).matches()) {
-            return "nombre completo (solo letras, máximo 100 caracteres)";
-        }
-        if (u.getFechaNacimiento() == null || u.getFechaNacimiento().isAfter(LocalDate.now())) {
-            return "fecha de nacimiento (formato dd/mm/aaaa, no puede ser posterior a hoy)";
-        }
-        if (u.getNacionalidad() == null || u.getNacionalidad().isBlank() || u.getNacionalidad().length() > 50) {
-            return "nacionalidad (obligatoria, máximo 50 caracteres)";
-        }
-        if (u.getCorreo() == null || u.getCorreo().length() > 100 || !PATRON_CORREO.matcher(u.getCorreo()).matches()) {
-            return "correo electrónico (formato válido, máximo 100 caracteres)";
-        }
-        if (u.getCodigoArea() == null || u.getCodigoArea().length() < 1 || u.getCodigoArea().length() > 4
-                || !PATRON_NUMERICO.matcher(u.getCodigoArea()).matches()) {
-            return "código de área (solo números, máximo 4 dígitos)";
-        }
-        if (u.getTelefono() == null || u.getTelefono().length() != 8 || !PATRON_NUMERICO.matcher(u.getTelefono()).matches()) {
-            return "teléfono (exactamente 8 dígitos)";
-        }
-        if (u.getDireccion() == null || u.getDireccion().isBlank() || u.getDireccion().length() > 150) {
-            return "dirección (obligatoria, máximo 150 caracteres)";
-        }
-        return null;
+  // CU-01 FA01 / CU-03 FA03: valida los datos personales; devuelve el nombre del primer campo inválido o null.
+  private String primerCampoInvalido(Usuario u) {
+    if (u.getNombreCompleto() == null || u.getNombreCompleto().isBlank() || u.getNombreCompleto().length() > 100
+      || !PATRON_SOLO_LETRAS.matcher(u.getNombreCompleto()).matches()) {
+      return "nombre completo (solo letras, máximo 100 caracteres)";
     }
+    if (u.getFechaNacimiento() == null || u.getFechaNacimiento().isAfter(LocalDate.now())) {
+      return "fecha de nacimiento (formato dd/mm/aaaa, no puede ser posterior a hoy)";
+    }
+    if (u.getNacionalidad() == null || u.getNacionalidad().isBlank() || u.getNacionalidad().length() > 50) {
+      return "nacionalidad (obligatoria, máximo 50 caracteres)";
+    }
+    if (u.getCorreo() == null || u.getCorreo().length() > 100 || !PATRON_CORREO.matcher(u.getCorreo().trim()).matches()) {
+      return "correo electrónico (formato válido, máximo 100 caracteres)";
+    }
+    // Validar código de área (ejemplo: solo números, exactamente 3 dígitos o 1 a 3 dígitos según tu regla)
+    if (u.getCodigoArea() == null || u.getCodigoArea().length() != 3 || !PATRON_NUMERICO.matcher(u.getCodigoArea()).matches()) {
+      return "código de área (solo números, exactamente 3 dígitos)";
+    }
+    if (u.getTelefono() == null || u.getTelefono().length() != 8 || !PATRON_NUMERICO.matcher(u.getTelefono()).matches()) {
+      return "teléfono (exactamente 8 dígitos)";
+    }
+    if (u.getDireccion() == null || u.getDireccion().isBlank() || u.getDireccion().length() > 150) {
+      return "dirección (obligatoria, máximo 150 caracteres)";
+    }
+    return null;
+  }
 
     public List<Usuario> findAll() {
         return usuarioRepository.findAll();

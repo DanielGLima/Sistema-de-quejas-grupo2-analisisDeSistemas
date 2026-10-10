@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("/api/casos")
@@ -22,6 +23,11 @@ import java.util.List;
 public class CasoController {
 
   private static final String SESSION_ID_USUARIO = "idUsuario";
+
+  // CU-02 FA02: alfanumérico estricto sin símbolos (máximo 20 caracteres)
+  private static final Pattern PATRON_FACTURA = Pattern.compile("^[A-Za-z0-9]{1,20}$");
+  // CU-02 FA05: texto alfabético y espacios (máximo 100 caracteres)
+  private static final Pattern PATRON_EMPLEADO = Pattern.compile("^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]{1,100}$");
 
   @Autowired
   private CasoService casoService;
@@ -56,17 +62,14 @@ public class CasoController {
   @Autowired
   private EmailService emailService;
 
-  // FA02: formato alfanumerico simple (letras, numeros y guiones).
-  private static final java.util.regex.Pattern PATRON_FACTURA = java.util.regex.Pattern.compile("^[A-Za-z0-9-]+$");
-
-  // CU-06 (soporte minimo): lista los casos del usuario autenticado.
+  // CU-03: lista los casos del usuario autenticado ("Mis casos")
   @GetMapping("/mios")
   public List<Caso> misCasos(HttpSession session) {
     Usuario usuario = usuarioAutenticado(session);
     return casoService.findByUsuario(usuario);
   }
 
-  // CU-06, paso 5: detalle completo con evidencias e historial de cambios de estado.
+  // CU-03: detalle completo con evidencias, historial de cambios de estado y respuestas oficiales.
   @GetMapping("/{id}")
   public ResponseEntity<CasoDetalleResponse> obtener(@PathVariable Integer id, HttpSession session) {
     Usuario usuario = usuarioAutenticado(session);
@@ -75,12 +78,13 @@ public class CasoController {
       .map(caso -> ResponseEntity.ok(new CasoDetalleResponse(
         caso,
         evidenciaCasoService.findByCaso(caso),
-        historialEstadoCasoService.findByCaso(caso)
+        historialEstadoCasoService.findByCaso(caso),
+        casoService.respuestasDe(caso)
       )))
       .orElseGet(() -> ResponseEntity.notFound().build());
   }
 
-  // CU-05: registra un nuevo caso. Las evidencias son obligatorias (al menos un archivo).
+  // CU-02: registra un nuevo caso (Queja, Reclamo, Denuncia o Sugerencia)
   @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<Caso> crear(
     @RequestParam Integer idTipoCaso,
@@ -95,14 +99,33 @@ public class CasoController {
 
     Usuario usuario = usuarioAutenticado(session);
 
-    // FA01: campos obligatorios (categoria del servicio, descripcion 10-1000 caracteres, al menos una evidencia).
-    if (descripcion == null || descripcion.trim().length() < 10 || archivos == null || archivos.isEmpty()) {
+    // FA01: campos obligatorios (tipo, sucursal, categoría, descripción 10-1000 y al menos una evidencia)
+    if (idTipoCaso == null || idSucursal == null || idCategoria == null
+      || descripcion == null || descripcion.trim().length() < 10 || descripcion.trim().length() > 1000
+      || archivos == null || archivos.isEmpty()) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe ingresar los campos obligatorios");
     }
 
-    // FA02: formato de numero de factura (campo opcional).
-    if (numeroFactura != null && !numeroFactura.isBlank() && !PATRON_FACTURA.matcher(numeroFactura).matches()) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El formato de la factura es invalido");
+    // FA02: formato de número de factura (campo opcional, alfanumérico sin símbolos)
+    if (numeroFactura != null && !numeroFactura.isBlank() && !PATRON_FACTURA.matcher(numeroFactura.trim()).matches()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El formato de la factura es inválido");
+    }
+
+    // FA05: formato del nombre del empleado (campo opcional, solo letras y espacios)
+    if (nombreEmpleadoInvolucrado != null && !nombreEmpleadoInvolucrado.isBlank()
+      && !PATRON_EMPLEADO.matcher(nombreEmpleadoInvolucrado.trim()).matches()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El nombre del empleado involucrado solo puede contener letras (máximo 100 caracteres)");
+    }
+
+    // FA03: validar tamaño y formato de cada archivo adjunto (máx 2 MB, solo JPG, PNG, PDF)
+    for (MultipartFile arch : archivos) {
+      if (arch.getSize() > 2 * 1024 * 1024) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El archivo adjunto supera los 2 MB o no corresponde a un formato permitido (PDF/Imagen)");
+      }
+      String nombre = arch.getOriginalFilename() == null ? "" : arch.getOriginalFilename().toLowerCase();
+      if (!nombre.endsWith(".jpg") && !nombre.endsWith(".jpeg") && !nombre.endsWith(".png") && !nombre.endsWith(".pdf")) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El archivo adjunto supera los 2 MB o no corresponde a un formato permitido (PDF/Imagen)");
+      }
     }
 
     TipoCaso tipoCaso = tipoCasoService.findById(idTipoCaso)
@@ -112,7 +135,11 @@ public class CasoController {
     CategoriaCaso categoriaCaso = categoriaCasoService.findById(idCategoria)
       .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe ingresar los campos obligatorios"));
     EstadoCaso estadoNuevo = estadoCasoService.findByNombre("Nuevo")
-      .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Catalogo de estados no inicializado"));
+      .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Catálogo de estados no inicializado"));
+
+    // FA04: anónimo solo se permite si el tipo de caso es Denuncia
+    boolean esDenuncia = "Denuncia".equalsIgnoreCase(tipoCaso.getNombre());
+    boolean anonimoFinal = esDenuncia && esAnonimo;
 
     Caso caso = new Caso();
     caso.setUsuario(usuario);
@@ -121,9 +148,9 @@ public class CasoController {
     caso.setCategoriaCaso(categoriaCaso);
     caso.setEstadoCaso(estadoNuevo);
     caso.setDescripcion(descripcion.trim());
-    caso.setNumeroFactura(numeroFactura);
-    caso.setNombreEmpleadoInvolucrado(nombreEmpleadoInvolucrado);
-    caso.setEsAnonimo(esAnonimo);
+    caso.setNumeroFactura(numeroFactura != null && !numeroFactura.isBlank() ? numeroFactura.trim() : null);
+    caso.setNombreEmpleadoInvolucrado(nombreEmpleadoInvolucrado != null && !nombreEmpleadoInvolucrado.isBlank() ? nombreEmpleadoInvolucrado.trim() : null);
+    caso.setEsAnonimo(anonimoFinal);
 
     Caso guardado = casoService.registrarCaso(caso);
 
@@ -138,44 +165,43 @@ public class CasoController {
       evidenciaCasoService.save(evidencia);
     }
 
-    // Paso 7: notifica al usuario por correo con el numero de seguimiento (CU-14)
+    // CU-10: notificar al usuario por correo con el número de seguimiento
     try {
       emailService.enviar(
         usuario.getCorreo(),
         "Caso registrado - " + guardado.getIdentificadorVisible(),
-        "Tu caso fue registrado exitosamente. Numero de seguimiento: " + guardado.getIdentificadorVisible()
+        "Tu caso fue registrado exitosamente. Número de seguimiento: " + guardado.getIdentificadorVisible()
           + "\n\nPuedes consultar su estado desde 'Mis casos' en el Sistema de Quejas."
       );
     } catch (Exception e) {
-      System.err.println("Advertencia al enviar correo CU-14: " + e.getMessage());
+      System.err.println("Advertencia al enviar correo CU-10: " + e.getMessage());
     }
 
-    // Bitacora de auditoria (CU-15)
+    // CU-10: bitácora de auditoría
     try {
-      bitacoraAuditoriaService.registrarAccionUsuarioSobreCaso(usuario, guardado, "Registro de caso", "CU-05",
+      bitacoraAuditoriaService.registrarAccionUsuarioSobreCaso(usuario, guardado, "Registro de caso", "CU-02",
         "Caso " + guardado.getIdentificadorVisible() + " creado en estado Nuevo");
     } catch (Exception e) {
-      System.err.println("Advertencia al auditar CU-15: " + e.getMessage());
+      System.err.println("Advertencia al auditar CU-10: " + e.getMessage());
     }
 
     return ResponseEntity.status(HttpStatus.CREATED).body(guardado);
   }
 
-  // CU-07: cancela un caso propio del usuario autenticado.
+  // Cancelar caso propio
   @PutMapping("/{id}/cancelar")
   public ResponseEntity<Caso> cancelar(@PathVariable Integer id, @RequestBody CancelarCasoRequest request, HttpSession session) {
     Usuario usuario = usuarioAutenticado(session);
     Caso caso = casoPropio(id, usuario);
     Caso cancelado = casoService.cancelar(caso, request.getMotivo());
 
-    // CU-15: el cambio de estado queda en la bitacora de auditoria.
-    bitacoraAuditoriaService.registrarAccionUsuarioSobreCaso(usuario, cancelado, "Cancelacion de caso", "CU-07",
+    bitacoraAuditoriaService.registrarAccionUsuarioSobreCaso(usuario, cancelado, "Cancelación de caso", "Gestión de casos",
       "Caso " + cancelado.getIdentificadorVisible() + " cancelado por el usuario. Motivo: " + request.getMotivo());
 
     return ResponseEntity.ok(cancelado);
   }
 
-  // CU-08: registra la evaluacion de atencion de un caso propio del usuario autenticado.
+  // Evaluar caso resuelto o cerrado
   @PostMapping("/{id}/evaluacion")
   public ResponseEntity<EvaluacionCaso> evaluar(@PathVariable Integer id, @RequestBody EvaluarCasoRequest request, HttpSession session) {
     Usuario usuario = usuarioAutenticado(session);

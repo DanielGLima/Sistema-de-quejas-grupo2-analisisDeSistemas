@@ -1,10 +1,12 @@
 <div class="pantalla">
-  <!-- Panel de marca con foto -->
+  <!-- Panel lateral con marca e información general del servicio (Paso 2) -->
   <section class="marca fondo-foto">
     <div class="marca-top">
       <div class="logo"><i></i>Las Delicias <small>Quejas y sugerencias</small></div>
       <h1>Cuéntanos cómo te fue. <em>Lo atendemos.</em></h1>
-      <p class="info-servicio">Registre y dé seguimiento a sus quejas, reclamos, denuncias y sugerencias sobre la atención en nuestras sucursales. Portal disponible las 24 horas.</p>
+      <p class="info-servicio">
+        Registre y dé seguimiento a sus quejas, reclamos, denuncias y sugerencias sobre la atención en nuestras sucursales. Portal disponible las 24 horas.
+      </p>
     </div>
 
     <div class="comanda" aria-hidden="true">
@@ -14,20 +16,26 @@
     </div>
   </section>
 
-  <!-- Formulario -->
+  <!-- Formulario de acceso -->
   <section class="acceso">
     <div class="acceso-caja">
       <h2>Ingresar al sistema</h2>
-      <p class="sub">Clientes y personal usan la misma pantalla.</p>
+      <p class="sub">Portal unificado para clientes y personal.</p>
 
-      <div *ngIf="mensajeExito" class="alert alert-success" role="status">{{ mensajeExito }}</div>
-
-      <div *ngIf="mensajeError" class="alert alert-danger" role="alert">
-        <span>{{ mensajeError }}</span>
-        <button *ngIf="servicioFueraDeLinea" type="button" class="btn-reintentar" (click)="reintentar()">Reintentar</button>
+      <!-- Mensaje de éxito al cerrar sesión (Flujo 2, Paso 5) -->
+      <div *ngIf="mensajeExito" class="alert alert-success" role="status">
+        {{ mensajeExito }}
       </div>
 
-      <form [formGroup]="loginForm" (ngSubmit)="iniciarSesion()">
+      <!-- Alertas de error: FA02, FA03, FA04, FA05 -->
+      <div *ngIf="mensajeError" class="alert alert-danger" role="alert">
+        <span>{{ mensajeError }}</span>
+        <button *ngIf="servicioFueraDeLinea" type="button" class="btn-reintentar" (click)="reintentar()">
+          Reintentar
+        </button>
+      </div>
+
+      <form [formGroup]="loginForm" (ngSubmit)="iniciarSesion()" novalidate>
         <div class="form-group">
           <label for="correoElectronico">correo electrónico</label>
           <input
@@ -36,6 +44,7 @@
             maxlength="100"
             placeholder="Ingrese su correo electrónico"
             formControlName="correoElectronico"
+            autocomplete="email"
           />
         </div>
 
@@ -47,11 +56,16 @@
             maxlength="20"
             placeholder="Ingrese su contraseña"
             formControlName="password"
+            autocomplete="current-password"
           />
         </div>
 
-        <button type="submit" class="btn btn-primary">Ingresar al Sistema</button>
+        <button type="submit" class="btn btn-primary" [disabled]="cargando">
+          <span *ngIf="!cargando">Ingresar al Sistema</span>
+          <span *ngIf="cargando">Verificando...</span>
+        </button>
 
+        <!-- Opciones y enlaces alternativos (FA01) -->
         <div class="enlaces">
           <a routerLink="/recuperar-password" class="forgot-link">¿Olvidaste tu contraseña?</a>
           <span>¿No tienes una cuenta? <a routerLink="/registro" class="register-link">Registrarse</a></span>

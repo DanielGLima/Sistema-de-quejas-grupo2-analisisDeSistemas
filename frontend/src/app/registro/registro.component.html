@@ -5,22 +5,23 @@
       <p class="subtitle">Sistema de Quejas - Registrarse</p>
     </div>
 
-    <!-- Mensajes de alerta de error -->
-    <div *ngIf="mensajeError" class="alert alert-danger">
-      <span>⚠️ {{ mensajeError }}</span>
+    <!-- Mensajes de alerta: FA01, FA02, FA03, FA04, FA05 -->
+    <div *ngIf="mensajeError" class="alert alert-danger" role="alert">
+      <span>{{ mensajeError }}</span>
     </div>
 
-    <!-- Mensaje informativo de cancelación (FA03) -->
-    <div *ngIf="mensajeInfo" class="alert alert-info">
-      <span>ℹ️ {{ mensajeInfo }}</span>
+    <!-- FA06: Mensaje informativo de cancelación -->
+    <div *ngIf="mensajeInfo" class="alert alert-info" role="status">
+      <span>{{ mensajeInfo }}</span>
     </div>
 
-    <!-- Mensaje de éxito de registro -->
-    <div *ngIf="mensajeExito" class="alert alert-success">
-      <span>✅ {{ mensajeExito }}</span>
+    <!-- Paso 9: Mensaje de éxito -->
+    <div *ngIf="mensajeExito" class="alert alert-success" role="status">
+      <span>{{ mensajeExito }}</span>
     </div>
 
-    <form [formGroup]="registroForm">
+    <form [formGroup]="registroForm" novalidate>
+      <!-- Paso 3: Datos personales -->
       <div class="form-group">
         <label for="nombreCompleto">nombre completo</label>
         <input
@@ -40,7 +41,7 @@
             id="fechaNacimiento"
             type="text"
             maxlength="10"
-            placeholder="dd/mm/aaaa"
+            placeholder="DD/MM/AAAA"
             formControlName="fechaNacimiento"
             (input)="formatearFecha($event)"
           />
@@ -74,7 +75,7 @@
             type="text"
             inputmode="numeric"
             maxlength="4"
-            placeholder="ej 502"
+            placeholder="ej. 502"
             formControlName="codigoArea"
             (input)="soloNumeros($event, 'codigoArea')"
           />
@@ -105,12 +106,18 @@
         />
       </div>
 
-      <!-- Paso 4: Botón Crear nueva cuenta para habilitar ingreso de contraseña -->
-      <button *ngIf="!pasoPassword" type="button" class="btn btn-primary" [disabled]="verificandoCorreo" (click)="habilitarPassword()">
+      <!-- Paso 4: Botón para habilitar ingreso de contraseña -->
+      <button 
+        *ngIf="!pasoPassword" 
+        type="button" 
+        class="btn btn-primary" 
+        [disabled]="verificandoCorreo" 
+        (click)="habilitarPassword()"
+      >
         {{ verificandoCorreo ? 'Verificando correo...' : 'Crear nueva cuenta' }}
       </button>
 
-      <!-- Paso 5: Ingreso y confirmación de contraseña -->
+      <!-- Paso 5: Campos de contraseña -->
       <div *ngIf="pasoPassword" class="seccion-password">
         <div class="divider">
           <span>Seguridad de la Cuenta</span>
@@ -122,7 +129,7 @@
             id="password" 
             type="password" 
             maxlength="20" 
-            placeholder="Mínimo 8 caracteres"
+            placeholder="Mínimo 6 y máximo 20 caracteres"
             formControlName="password" 
           />
         </div>
@@ -138,13 +145,13 @@
           />
         </div>
 
-        <button type="button" class="btn btn-success" (click)="solicitarConfirmacion()">
+        <button type="button" class="btn btn-success" [disabled]="guardando" (click)="solicitarConfirmacion()">
           Registrar Usuario
         </button>
       </div>
     </form>
 
-    <!-- Modal de confirmación (Pasos 6 y 7, FA03) -->
+    <!-- Modal de confirmación (Paso 6 y 7, FA06) -->
     <div *ngIf="mostrarModalConfirmacion" class="modal-backdrop">
       <div class="modal-card">
         <h3>Confirmación</h3>
@@ -156,9 +163,9 @@
       </div>
     </div>
 
-    <!-- FA04: Enlace de retorno -->
+    <!-- FA07: Descartar datos y volver al inicio de sesión -->
     <div class="footer-actions">
-      <a routerLink="/login" class="back-link">
+      <a (click)="volverAlInicio()" class="back-link" style="cursor: pointer;">
         Volver al Inicio de Sesión
       </a>
     </div>

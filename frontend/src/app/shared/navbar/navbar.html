@@ -1,15 +1,16 @@
 <aside class="menu-lateral">
   <!-- Marca -->
-  <a class="marca" [routerLink]="rolPersonal ? '/gestionar-casos' : '/consultar-casos'">
+  <a class="marca" [routerLink]="esPersonal ? '/gestionar-casos' : '/consultar-casos'">
     <i class="punto"></i>
     <span class="marca-texto">
       <span class="marca-nombre">Las Delicias</span>
-      <span class="marca-sub">{{ rolPersonal ? 'Panel administrativo' : 'Quejas y sugerencias' }}</span>
+      <span class="marca-sub">{{ esPersonal ? 'Panel administrativo' : 'Quejas y sugerencias' }}</span>
     </span>
   </a>
 
   <nav class="enlaces" aria-label="Principal">
-    <ng-container *ngIf="!rolPersonal">
+    <!-- Menú para Clientes (CU-01 a CU-06) -->
+    <ng-container *ngIf="!esPersonal">
       <a routerLink="/registrar-caso" routerLinkActive="activo" class="enlace">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
         <span>Nuevo caso</span>
@@ -24,12 +25,13 @@
       </a>
     </ng-container>
 
-    <ng-container *ngIf="rolPersonal">
+    <!-- Menú para Personal Interno (CU-07 a CU-10 / CU-13) -->
+    <ng-container *ngIf="esPersonal">
       <a routerLink="/gestionar-casos" routerLinkActive="activo" class="enlace">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v12H4zM4 10h16"/></svg>
         <span>Gestión de casos</span>
       </a>
-      <a *ngIf="rolPersonal === 'Administrador General'" routerLink="/administrar" routerLinkActive="activo" class="enlace">
+      <a *ngIf="esAdministrador" routerLink="/administrar" routerLinkActive="activo" class="enlace">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>
         <span>Administración</span>
       </a>
@@ -40,9 +42,9 @@
 
   <div class="usuario">
     <div class="usuario-datos">
-      <span class="usuario-rol">{{ rolPersonal ? rolPersonal : 'Cliente' }}</span>
+      <span class="usuario-rol">{{ etiquetaRol }}</span>
     </div>
-    <!-- CU-00: cerrar sesión -->
+    <!-- CU-00 Flujo Normal 2: Cerrar sesión permanentemente visible y accesible -->
     <button type="button" class="enlace cerrar" (click)="cerrarSesion()">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></svg>
       <span>Cerrar sesión</span>
