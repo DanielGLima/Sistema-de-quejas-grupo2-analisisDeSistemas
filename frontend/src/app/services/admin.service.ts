@@ -73,8 +73,14 @@ export class AdminService {
     return this.http.get<NotificacionApi[]>(`${ADMIN}/notificaciones`, OPTS);
   }
 
-  bitacora(limite = 200): Observable<BitacoraApi[]> {
-    return this.http.get<BitacoraApi[]>(`${ADMIN}/bitacora`, { ...OPTS, params: { limite } });
+  bitacora(filtros: { fechaInicial?: string; fechaFinal?: string; accion?: string; modulo?: string; tipoActor?: string } = {}, limite = 200): Observable<BitacoraApi[]> {
+    let params = new HttpParams().set('limite', limite);
+    Object.entries(filtros).forEach(([clave, valor]) => {
+      if (valor !== null && valor !== undefined && valor !== '') {
+        params = params.set(clave, String(valor));
+      }
+    });
+    return this.http.get<BitacoraApi[]>(`${ADMIN}/bitacora`, { ...OPTS, params });
   }
 
   // ---- CU-13: usuarios internos ----

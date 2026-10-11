@@ -182,7 +182,7 @@ public class CasoService {
         LocalDateTime fechaCierre = fechaDeCierre(caso);
         if (Duration.between(fechaCierre, LocalDateTime.now()).toDays() > PLAZO_REAPERTURA_DIAS) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "El plazo para solicitar la reapertura ha vencido. Puede registrar un nuevo caso (CU-05)");
+                    "El plazo para solicitar la reapertura ha vencido. Puede registrar un nuevo caso (CU-02)");
         }
 
         String urlEvidencia = null;
