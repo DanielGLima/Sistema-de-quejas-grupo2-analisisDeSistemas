@@ -2,7 +2,6 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
-import { AdminService } from '../../services/admin.service';
 
 @Component({
   selector: 'app-navbar',
@@ -12,9 +11,8 @@ import { AdminService } from '../../services/admin.service';
   styleUrls: ['./navbar.scss']
 })
 export class NavbarComponent implements OnInit, OnDestroy {
-  constructor(private router: Router, private authService: AuthService, private adminService: AdminService) {}
+  constructor(private router: Router, private authService: AuthService) {}
 
-  // Con el menú lateral visible, el contenido de la página deja espacio a la izquierda (ver styles.scss).
   ngOnInit(): void {
     document.body.classList.add('con-menu');
   }
@@ -23,26 +21,53 @@ export class NavbarComponent implements OnInit, OnDestroy {
     document.body.classList.remove('con-menu');
   }
 
-  // Rol del personal interno si hay una sesión de personal (solo para armar el menú).
-  get rolPersonal(): string | null {
-    return this.adminService.rolGuardado();
+  // Rol del usuario actual (CLIENTE, OPERADOR, GERENTE, ADMINISTRADOR)
+  get rolUsuario(): string | null {
+    return this.authService.getRol();
   }
 
-  // CU-04: Cerrar Sesión
+  // Propiedades requeridas por navbar.html
+  get esPersonal(): boolean {
+    const rol = this.rolUsuario?.toUpperCase();
+    return rol === 'OPERADOR' || rol === 'GERENTE' || rol === 'ADMINISTRADOR' || rol === 'ADMINISTRADOR GENERAL';
+  }
+
+  get esAdministrador(): boolean {
+    const rol = this.rolUsuario?.toUpperCase();
+    return rol === 'ADMINISTRADOR' || rol === 'ADMINISTRADOR GENERAL';
+  }
+
+  get etiquetaRol(): string {
+    const rol = this.rolUsuario?.toUpperCase();
+    if (rol === 'ADMINISTRADOR' || rol === 'ADMINISTRADOR GENERAL') return 'Administrador General';
+    if (rol === 'GERENTE') return 'Gerente';
+    if (rol === 'OPERADOR') return 'Operador';
+    return 'Cliente';
+  }
+
+  // CU-00 Flujo Normal 2: Cerrar sesión
   cerrarSesion(): void {
-    const cierre = this.rolPersonal ? this.adminService.logout() : this.authService.logout();
-    cierre.subscribe({
-      next: () => this.finalizarSesionLocal(),
-      // FA01: si la sesión ya había expirado, igual se redirige al portal sin error
-      error: () => this.finalizarSesionLocal()
+    this.authService.logout().subscribe({
+      next: () => {
+        // Pasos 3, 4, 5 y 6: Sesión destruida en servidor y navegador -> Redirige al portal con aviso de éxito
+        this.finalizarSesionLocal(true);
+      },
+      error: () => {
+        // FA06: Si la sesión ya había expirado por inactividad, redirige al portal público sin errores
+        this.finalizarSesionLocal(false);
+      }
     });
   }
 
-  private finalizarSesionLocal(): void {
+  private finalizarSesionLocal(mostrarMensajeExito: boolean): void {
+    this.authService.limpiarSesionLocal();
     localStorage.clear();
     sessionStorage.clear();
 
-    // Pasos 5 y 6: redirección al portal público (CU-00) con el mensaje de éxito en pantalla, sin alert.
-    this.router.navigate(['/login'], { state: { sesionFinalizada: true } });
+    if (mostrarMensajeExito) {
+      this.router.navigate(['/login'], { state: { sesionFinalizada: true } });
+    } else {
+      this.router.navigate(['/login']);
+    }
   }
 }

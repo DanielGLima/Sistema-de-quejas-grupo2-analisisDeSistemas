@@ -2,14 +2,18 @@ package com.sistemadequejas.controller;
 
 import com.sistemadequejas.dto.ActualizarPerfilRequest;
 import com.sistemadequejas.dto.LoginRequest;
+import com.sistemadequejas.dto.LoginResponse;
 import com.sistemadequejas.dto.RecuperarConfirmarRequest;
 import com.sistemadequejas.dto.RecuperarSolicitarRequest;
 import com.sistemadequejas.dto.RegistroRequest;
 import com.sistemadequejas.config.SesionesActivas;
+import com.sistemadequejas.config.SesionPersonal;
+import com.sistemadequejas.model.Personal;
 import com.sistemadequejas.model.RecuperacionContrasena;
 import com.sistemadequejas.model.Usuario;
 import com.sistemadequejas.service.BitacoraAuditoriaService;
 import com.sistemadequejas.service.EmailService;
+import com.sistemadequejas.service.PersonalService;
 import com.sistemadequejas.service.RecuperacionContrasenaService;
 import com.sistemadequejas.service.UsuarioService;
 import jakarta.servlet.http.HttpSession;
@@ -20,12 +24,18 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
+import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
     private static final String SESSION_ID_USUARIO = "idUsuario";
+    private static final String SESSION_TIPO = "tipoUsuario";
+    private static final String SESSION_ROL = "rolUsuario";
+
+    // Formato estandar de correo electronico (CU-00).
+    private static final Pattern PATRON_EMAIL = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
 
     @Autowired
     private UsuarioService usuarioService;
@@ -42,10 +52,14 @@ public class AuthController {
     @Autowired
     private SesionesActivas sesionesActivas;
 
+    @Autowired
+    private PersonalService personalService;
+
     // CU-01, FA01.1: permite validar el correo antes de pedir la contrasena.
     @GetMapping("/correo-disponible")
     public ResponseEntity<Map<String, Boolean>> correoDisponible(@RequestParam String correo) {
-        boolean disponible = usuarioService.buscarPorCorreo(correo).isEmpty();
+        boolean disponible = usuarioService.buscarPorCorreo(correo).isEmpty()
+                && personalService.findByCorreo(correo).isEmpty();
         return ResponseEntity.ok(Map.of("disponible", disponible));
     }
 
@@ -65,13 +79,56 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(creado);
     }
 
-    // CU-00: valida credenciales y abre sesion del lado del servidor.
+    // CU-00: una sola pantalla de acceso para clientes y personal interno.
+    // Primero se intenta como cliente y, si no corresponde, como personal; las credenciales
+    // incorrectas devuelven siempre el mismo mensaje (no se revela cual dato fallo).
     @PostMapping("/login")
-    public ResponseEntity<Usuario> login(@RequestBody LoginRequest request, HttpSession session) {
-        Usuario usuario = usuarioService.autenticar(request.getCorreo(), request.getPassword());
-        session.setAttribute(SESSION_ID_USUARIO, usuario.getIdUsuario());
-        sesionesActivas.registrar(usuario.getIdUsuario(), session);
-        return ResponseEntity.ok(usuario);
+    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request, HttpSession session) {
+        String correo = request.getCorreo() == null ? "" : request.getCorreo().trim();
+        String password = request.getPassword() == null ? "" : request.getPassword();
+
+        // FA04: campos obligatorios vacios.
+        if (correo.isEmpty() || password.trim().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe ingresar los campos obligatorios");
+        }
+        if (correo.length() > 100 || !PATRON_EMAIL.matcher(correo).matches()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El formato del correo electrónico es inválido");
+        }
+        if (password.length() > 20) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La contraseña no debe superar los 20 caracteres");
+        }
+
+        // 1. Cliente
+        try {
+            Usuario usuario = usuarioService.autenticar(correo, password);
+            session.setAttribute(SESSION_ID_USUARIO, usuario.getIdUsuario());
+            session.setAttribute(SESSION_TIPO, "CLIENTE");
+            session.setAttribute(SESSION_ROL, "CLIENTE");
+            sesionesActivas.registrar(usuario.getIdUsuario(), session);
+            return ResponseEntity.ok(new LoginResponse(
+                    usuario.getIdUsuario(), usuario.getNombreCompleto(), usuario.getCorreo(), "CLIENTE", "CLIENTE"));
+        } catch (ResponseStatusException noEsCliente) {
+            // Se intenta como personal interno.
+        }
+
+        // 2. Personal interno (Administrador General, Gerente u Operador)
+        try {
+            Personal personal = personalService.autenticar(correo, password);
+            String nombreRol = personal.getRol() == null ? "" : personal.getRol().getNombre().toUpperCase();
+            String rolCodigo = nombreRol.contains("ADMIN") ? "ADMINISTRADOR" : nombreRol.contains("GERENTE") ? "GERENTE" : "OPERADOR";
+
+            // La sesion de personal usa su propio atributo (lo leen CU-07 a CU-10).
+            session.setAttribute(SesionPersonal.SESSION_ID_PERSONAL, personal.getIdPersonal());
+            session.setAttribute(SESSION_TIPO, "PERSONAL");
+            session.setAttribute(SESSION_ROL, rolCodigo);
+            bitacoraAuditoriaService.registrarAccionPersonal(personal, null, "Inicio de sesión", "Acceso al portal",
+                    BitacoraAuditoriaService.cambio("{}", BitacoraAuditoriaService.json("rol", personal.getRol().getNombre())));
+            return ResponseEntity.ok(new LoginResponse(
+                    personal.getIdPersonal(), personal.getNombreCompleto(), personal.getCorreo(), rolCodigo, "PERSONAL"));
+        } catch (ResponseStatusException noEsPersonal) {
+            // FA05: credenciales incorrectas.
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Correo electrónico o contraseña incorrectos");
+        }
     }
 
     // CU-04: destruye la sesion activa.
@@ -83,9 +140,13 @@ public class AuthController {
 
     // Usado por el frontend para saber si hay sesion activa y cargar el perfil (CU-03).
     @GetMapping("/me")
-    public ResponseEntity<Usuario> me(HttpSession session) {
-        Usuario usuario = usuarioAutenticado(session);
-        return ResponseEntity.ok(usuario);
+    public ResponseEntity<?> me(HttpSession session) {
+        Object idPersonal = session.getAttribute(SesionPersonal.SESSION_ID_PERSONAL);
+        if (idPersonal != null) {
+            return ResponseEntity.ok(personalService.findById((Integer) idPersonal)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Debe iniciar sesión")));
+        }
+        return ResponseEntity.ok(usuarioAutenticado(session));
     }
 
     // CU-03: actualiza datos personales y, si se envia, la contrasena.

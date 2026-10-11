@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import { API_BASE_URL } from '../core/api-config';
 import { Usuario } from '../core/models/usuario';
 
@@ -27,12 +27,27 @@ export interface ActualizarPerfilRequest {
   passwordNueva?: string;
 }
 
+export interface LoginResponse {
+  id: number;
+  nombreCompleto: string;
+  correo: string;
+  rol: string; // 'CLIENTE', 'OPERADOR', 'GERENTE', 'ADMINISTRADOR'
+  tipoUsuario: string; // 'CLIENTE' | 'PERSONAL'
+}
+
 export interface RecuperarSolicitarResponse {
   mensaje: string;
 }
 
+export interface LogoutResponse {
+  message: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
+
+  private readonly STORAGE_USER = 'currentUser';
+  private readonly STORAGE_ROL = 'userRole';
 
   constructor(private http: HttpClient) {}
 
@@ -48,17 +63,53 @@ export class AuthService {
     });
   }
 
-  // CU-00
-  login(correo: string, password: string): Observable<Usuario> {
-    return this.http.post<Usuario>(`${API_BASE_URL}/auth/login`, { correo, password }, { withCredentials: true });
+  // CU-00: Iniciar sesión y guardar datos locales
+  login(correo: string, password: string): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(
+      `${API_BASE_URL}/auth/login`,
+      { correo, password },
+      { withCredentials: true }
+    ).pipe(
+      tap((res) => {
+        localStorage.setItem(this.STORAGE_USER, JSON.stringify(res));
+        localStorage.setItem(this.STORAGE_ROL, res.rol);
+      })
+    );
   }
 
-  // CU-04
-  logout(): Observable<void> {
-    return this.http.post<void>(`${API_BASE_URL}/auth/logout`, {}, { withCredentials: true });
+  // CU-00: Flujo 2 y FA06 - Cerrar sesión y limpiar sesión local
+  logout(): Observable<LogoutResponse> {
+    return this.http.post<LogoutResponse>(
+      `${API_BASE_URL}/auth/logout`,
+      {},
+      { withCredentials: true }
+    ).pipe(
+      tap({
+        next: () => this.limpiarSesionLocal(),
+        error: () => this.limpiarSesionLocal() // FA06: Si la sesión ya expiró, limpia y permite salir
+      })
+    );
   }
 
-  // Sesion activa / carga de perfil (CU-03)
+  limpiarSesionLocal(): void {
+    localStorage.removeItem(this.STORAGE_USER);
+    localStorage.removeItem(this.STORAGE_ROL);
+  }
+
+  getUsuarioActual(): LoginResponse | null {
+    const raw = localStorage.getItem(this.STORAGE_USER);
+    return raw ? JSON.parse(raw) : null;
+  }
+
+  getRol(): string | null {
+    return localStorage.getItem(this.STORAGE_ROL);
+  }
+
+  estaAutenticado(): boolean {
+    return !!localStorage.getItem(this.STORAGE_USER);
+  }
+
+  // Sesión activa / carga de perfil (CU-03)
   obtenerSesion(): Observable<Usuario> {
     return this.http.get<Usuario>(`${API_BASE_URL}/auth/me`, { withCredentials: true });
   }
@@ -70,11 +121,19 @@ export class AuthService {
 
   // CU-02 paso 1
   recuperarSolicitar(correo: string): Observable<RecuperarSolicitarResponse> {
-    return this.http.post<RecuperarSolicitarResponse>(`${API_BASE_URL}/auth/recuperar/solicitar`, { correo }, { withCredentials: true });
+    return this.http.post<RecuperarSolicitarResponse>(
+      `${API_BASE_URL}/auth/recuperar/solicitar`,
+      { correo },
+      { withCredentials: true }
+    );
   }
 
   // CU-02 paso 2
   recuperarConfirmar(correo: string, codigo: string, passwordNueva: string): Observable<void> {
-    return this.http.post<void>(`${API_BASE_URL}/auth/recuperar/confirmar`, { correo, codigo, passwordNueva }, { withCredentials: true });
+    return this.http.post<void>(
+      `${API_BASE_URL}/auth/recuperar/confirmar`,
+      { correo, codigo, passwordNueva },
+      { withCredentials: true }
+    );
   }
 }
