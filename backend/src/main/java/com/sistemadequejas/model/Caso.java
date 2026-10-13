@@ -16,6 +16,11 @@ public class Caso {
     @Column(name = "identificador_visible", length = 20, nullable = false, unique = true)
     private String identificadorVisible;
 
+    // Numero secuencial del caso dentro de los casos del propio cliente (1, 2, 3...).
+    // No se almacena: se calcula al consultar, porque los casos no se eliminan.
+    @jakarta.persistence.Transient
+    private Integer numeroCliente;
+
     @ManyToOne
     @JoinColumn(name = "id_usuario", nullable = false)
     private Usuario usuario;
@@ -184,5 +189,13 @@ public class Caso {
 
     public void setEvaluacion(EvaluacionCaso evaluacion) {
         this.evaluacion = evaluacion;
+    }
+
+    public Integer getNumeroCliente() {
+        return numeroCliente;
+    }
+
+    public void setNumeroCliente(Integer numeroCliente) {
+        this.numeroCliente = numeroCliente;
     }
 }

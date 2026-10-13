@@ -5,7 +5,7 @@
       "name": "frontend",
       "runtimeExecutable": "cmd",
       "runtimeArgs": ["/c", "npm --prefix frontend start -- --port %PORT%"],
-      "port": 4200,
+      "port": 4300,
       "autoPort": true
     }
   ]

@@ -8,6 +8,7 @@ export interface EvaluacionCasoApi {
 export interface Caso {
   idCaso: number;
   identificadorVisible: string;
+  numeroCliente?: number;
   descripcion: string;
   numeroFactura?: string;
   nombreEmpleadoInvolucrado?: string;

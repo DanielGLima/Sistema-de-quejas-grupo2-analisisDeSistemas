@@ -82,6 +82,16 @@ public class CasoService {
         return casoRepository.findByUsuarioOrderByFechaCreacionDesc(usuario);
     }
 
+    // Asigna a cada caso su numero secuencial dentro de los casos del cliente (1 = el mas antiguo).
+    public void numerarParaCliente(List<Caso> casosDelCliente) {
+        List<Caso> ascendente = casosDelCliente.stream()
+                .sorted(java.util.Comparator.comparing(Caso::getFechaCreacion).thenComparing(Caso::getIdCaso))
+                .toList();
+        for (int i = 0; i < ascendente.size(); i++) {
+            ascendente.get(i).setNumeroCliente(i + 1);
+        }
+    }
+
     public Optional<Caso> findById(Integer id) {
         return casoRepository.findById(id);
     }

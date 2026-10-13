@@ -64,7 +64,9 @@ public class CasoController {
     @GetMapping("/mios")
     public List<Caso> misCasos(HttpSession session) {
         Usuario usuario = usuarioAutenticado(session);
-        return casoService.findByUsuario(usuario);
+        List<Caso> casos = casoService.findByUsuario(usuario);
+        casoService.numerarParaCliente(casos);
+        return casos;
     }
 
     // CU-06, paso 5: detalle completo con evidencias e historial de cambios de estado.
@@ -73,6 +75,13 @@ public class CasoController {
         Usuario usuario = usuarioAutenticado(session);
         return casoService.findById(id)
                 .filter(caso -> caso.getUsuario().getIdUsuario().equals(usuario.getIdUsuario()))
+                .map(caso -> {
+                    List<Caso> propios = casoService.findByUsuario(usuario);
+                    casoService.numerarParaCliente(propios);
+                    propios.stream().filter(p -> p.getIdCaso().equals(caso.getIdCaso())).findFirst()
+                            .ifPresent(p -> caso.setNumeroCliente(p.getNumeroCliente()));
+                    return caso;
+                })
                 .map(caso -> ResponseEntity.ok(new CasoDetalleResponse(
                         caso,
                         evidenciaCasoService.findByCaso(caso),

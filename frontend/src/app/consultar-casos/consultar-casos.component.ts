@@ -22,7 +22,8 @@ export interface SolicitudReapertura {
 
 export interface Caso {
   idCaso: number;
-  id: string;
+  id: string; // numero secuencial del cliente (1, 2, 3...)
+  codigo: string; // codigo completo del caso, ej. SUG-INS-15
   tipoCaso: string;
   sucursal: string;
   motivo: string;
@@ -105,7 +106,8 @@ export class ConsultarCasosComponent implements OnInit {
     this.casoService.misCasos().subscribe({ next: casosApi => {
       this.casos = casosApi.map(c => ({
         idCaso: c.idCaso,
-        id: c.identificadorVisible,
+        id: String(c.numeroCliente ?? c.idCaso),
+        codigo: c.identificadorVisible,
         tipoCaso: c.tipoCaso.nombre,
         sucursal: c.sucursal.nombreSucursal,
         motivo: c.categoriaCaso?.nombre ?? 'No aplica',
