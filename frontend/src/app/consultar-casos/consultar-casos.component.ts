@@ -202,8 +202,10 @@ export class ConsultarCasosComponent implements OnInit {
   }
 
   // Paso 3: la opción "Cancelar caso" se ofrece mientras el caso siga abierto; FA01 la rechaza si ya está en atención.
+  // La opcion solo se ofrece cuando el caso es cancelable (Nuevo o En espera, sin responsable).
+  // En cualquier otro estado no se muestra y el servidor tambien rechaza el intento (FA01).
   mostrarOpcionCancelar(caso: Caso): boolean {
-    return ['nuevo', 'en espera', 'en proceso'].includes(caso.estado?.toLowerCase());
+    return this.puedeCancelar(caso);
   }
 
   // Indica si la cancelación se inició desde la ventana de detalle (para volver a ella con “No”).
