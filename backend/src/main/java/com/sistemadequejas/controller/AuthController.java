@@ -24,7 +24,6 @@ public class AuthController {
   private static final String SESSION_TIPO = "tipoUsuario";
   private static final String SESSION_ROL = "rolUsuario";
 
-  // Formato estandar para email (CU-00 Flujo 1)
   private static final Pattern PATRON_EMAIL = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
 
   @Autowired
@@ -42,7 +41,6 @@ public class AuthController {
   @Autowired
   private EmailService emailService;
 
-  // CU-01, FA01.1: valida disponibilidad de correo
   @GetMapping("/correo-disponible")
   public ResponseEntity<Map<String, Boolean>> correoDisponible(@RequestParam String correo) {
     boolean disponible = usuarioService.buscarPorCorreo(correo).isEmpty()
@@ -50,7 +48,6 @@ public class AuthController {
     return ResponseEntity.ok(Map.of("disponible", disponible));
   }
 
-  // CU-01: registro de cliente
   @PostMapping("/registro")
   public ResponseEntity<Usuario> registro(@RequestBody RegistroRequest request) {
     Usuario usuario = new Usuario();
@@ -63,34 +60,41 @@ public class AuthController {
     usuario.setDireccion(request.getDireccion());
 
     Usuario creado = usuarioService.registrar(usuario, request.getPassword());
+
+    try {
+      bitacoraAuditoriaService.registrarAccionUsuario(
+        creado,
+        "Registro de cuenta",
+        "CU-01",
+        "Creación de nueva cuenta de cliente para: " + creado.getCorreo()
+      );
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+
     creado.setContrasenaHash(null);
     return ResponseEntity.status(HttpStatus.CREATED).body(creado);
   }
 
-  // CU-00: Flujo normal 1 y flujos alternos FA04, FA05
   @PostMapping("/login")
   public ResponseEntity<?> login(@RequestBody LoginRequest request, HttpSession session) {
     String correo = request.getCorreo();
     String password = request.getPassword();
 
-    // FA04: Campos obligatorios vacios
     if (correo == null || correo.trim().isEmpty() || password == null || password.trim().isEmpty()) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe ingresar los campos obligatorios");
     }
 
     correo = correo.trim();
 
-    // Validacion de longitud y formato email segun especificacion CU-00 (max 100 caracteres)
     if (correo.length() > 100 || !PATRON_EMAIL.matcher(correo).matches()) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El formato del correo electrónico es inválido");
     }
 
-    // Validacion de longitud de contrasena (max 20 caracteres)
     if (password.length() > 20) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La contraseña no debe superar los 20 caracteres");
     }
 
-    // 1. Intentar autenticar como Cliente
     try {
       Usuario usuario = usuarioService.autenticar(correo, password);
       session.setAttribute(SESSION_ID_USUARIO, usuario.getIdUsuario());
@@ -106,10 +110,8 @@ public class AuthController {
       );
       return ResponseEntity.ok(response);
     } catch (ResponseStatusException exCliente) {
-      // Si el cliente no existe o sus credenciales fallaron, intentamos con Personal interno
     }
 
-    // 2. Intentar autenticar como Personal interno (Administrador General, Gerente, Operador)
     try {
       Personal personal = personalService.autenticar(correo, password);
       String nombreRol = personal.getRol() != null ? personal.getRol().getNombre() : "OPERADOR";
@@ -134,25 +136,21 @@ public class AuthController {
       );
       return ResponseEntity.ok(response);
     } catch (ResponseStatusException exPersonal) {
-      // FA05: Credenciales incorrectas para ambos
       throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Correo electrónico o contraseña incorrectos");
     }
   }
 
-  // CU-00: Flujo normal 2 y FA06 (Cerrar sesion)
   @PostMapping("/logout")
   public ResponseEntity<Map<String, String>> logout(HttpSession session) {
     if (session != null) {
       try {
         session.invalidate();
       } catch (IllegalStateException e) {
-        // FA06: Sesion ya expirada, se continua sin error
       }
     }
     return ResponseEntity.ok(Map.of("message", "Sesión finalizada correctamente"));
   }
 
-  // CU-00 / CU-03: Informacion del usuario autenticado
   @GetMapping("/me")
   public ResponseEntity<?> me(HttpSession session) {
     Object idUsuario = session.getAttribute(SESSION_ID_USUARIO);
@@ -175,12 +173,21 @@ public class AuthController {
     }
   }
 
-  // CU-03: Actualizar perfil de cliente
   @PutMapping("/perfil")
   public ResponseEntity<Usuario> actualizarPerfil(@RequestBody ActualizarPerfilRequest request, HttpSession session) {
     Usuario usuario = usuarioAutenticado(session);
 
     usuarioService.validarCorreoDisponibleParaOtroUsuario(request.getCorreo(), usuario.getIdUsuario());
+
+    String anteriorJson = BitacoraAuditoriaService.json(
+      "nombre", usuario.getNombreCompleto(),
+      "fechaNacimiento", usuario.getFechaNacimiento() != null ? usuario.getFechaNacimiento().toString() : "",
+      "nacionalidad", usuario.getNacionalidad(),
+      "correo", usuario.getCorreo(),
+      "codigoArea", usuario.getCodigoArea(),
+      "telefono", usuario.getTelefono(),
+      "direccion", usuario.getDireccion()
+    );
 
     usuario.setNombreCompleto(request.getNombreCompleto());
     usuario.setFechaNacimiento(request.getFechaNacimiento());
@@ -192,17 +199,33 @@ public class AuthController {
 
     Usuario actualizado = usuarioService.actualizarPerfil(usuario, request.getPasswordActual(), request.getPasswordNueva());
 
+    boolean cambioPass = request.getPasswordNueva() != null && !request.getPasswordNueva().isBlank();
+    String nuevoJson = BitacoraAuditoriaService.json(
+      "nombre", actualizado.getNombreCompleto(),
+      "fechaNacimiento", actualizado.getFechaNacimiento() != null ? actualizado.getFechaNacimiento().toString() : "",
+      "nacionalidad", actualizado.getNacionalidad(),
+      "correo", actualizado.getCorreo(),
+      "codigoArea", actualizado.getCodigoArea(),
+      "telefono", actualizado.getTelefono(),
+      "direccion", actualizado.getDireccion(),
+      "cambioContrasena", String.valueOf(cambioPass)
+    );
+
     try {
-      bitacoraAuditoriaService.registrarAccionUsuario(actualizado, "Actualizacion de perfil", "CU-03", "El usuario actualizo sus datos personales");
+      bitacoraAuditoriaService.registrarAccionUsuario(
+        actualizado,
+        "Actualización de perfil",
+        "CU-01",
+        BitacoraAuditoriaService.cambio(anteriorJson, nuevoJson)
+      );
     } catch (Exception e) {
-      System.err.println("Advertencia al auditar CU-03: " + e.getMessage());
+      e.printStackTrace();
     }
 
     actualizado.setContrasenaHash(null);
     return ResponseEntity.ok(actualizado);
   }
 
-  // CU-02 paso 1
   @PostMapping("/recuperar/solicitar")
   public ResponseEntity<Map<String, String>> recuperarSolicitar(@RequestBody RecuperarSolicitarRequest request) {
     Usuario usuario = usuarioService.buscarPorCorreo(request.getCorreo())
@@ -212,15 +235,14 @@ public class AuthController {
 
     emailService.enviar(
       request.getCorreo(),
-      "Recuperacion de contrasena - Sistema de Quejas Las Delicias",
-      "Tu codigo de recuperacion es: " + recuperacion.getCodigoToken()
-        + "\n\nEste codigo vence en 15 minutos. Si no solicitaste este cambio, ignora este mensaje."
+      "Recuperación de contraseña - Sistema de Quejas Las Delicias",
+      "Tu código de recuperación es: " + recuperacion.getCodigoToken()
+        + "\n\nEste código vence en 15 minutos. Si no solicitaste este cambio, ignora este mensaje."
     );
 
-    return ResponseEntity.ok(Map.of("mensaje", "Se enviaron instrucciones de recuperacion a tu correo"));
+    return ResponseEntity.ok(Map.of("mensaje", "Se enviaron instrucciones de recuperación a tu correo"));
   }
 
-  // CU-02 paso 2: valida el codigo y aplica la nueva contrasena.
   @PostMapping("/recuperar/confirmar")
   public ResponseEntity<Void> recuperarConfirmar(@RequestBody RecuperarConfirmarRequest request) {
     Usuario usuario = usuarioService.buscarPorCorreo(request.getCorreo())
@@ -229,6 +251,18 @@ public class AuthController {
     RecuperacionContrasena recuperacion = recuperacionContrasenaService.validarCodigo(usuario, request.getCodigo());
     usuarioService.restablecerPassword(usuario, request.getPasswordNueva());
     recuperacionContrasenaService.consumir(recuperacion);
+
+    try {
+      bitacoraAuditoriaService.registrarAccionUsuario(
+        usuario,
+        "Recuperación de contraseña",
+        "CU-01",
+        "Restablecimiento exitoso de contraseña mediante código de verificación para: " + usuario.getCorreo()
+      );
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+
     return ResponseEntity.noContent().build();
   }
 
