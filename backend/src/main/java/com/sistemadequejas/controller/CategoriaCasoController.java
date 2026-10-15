@@ -1,4 +1,3 @@
-
 package com.sistemadequejas.controller;
 
 import com.sistemadequejas.model.CategoriaCaso;
@@ -12,8 +11,6 @@ import java.util.List;
 // Solo lectura publica (categorias activas). La administracion es CU-13 (/api/admin/catalogos).
 @RestController
 @RequestMapping("/api/categorias-caso")
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-
 public class CategoriaCasoController {
 
     @Autowired

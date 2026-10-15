@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { NavbarComponent } from '../shared/navbar/navbar';
 import { CasoService } from '../services/caso.service';
 import { BACKEND_BASE_URL } from '../core/api-config';
@@ -22,7 +22,8 @@ export interface SolicitudReapertura {
 
 export interface Caso {
   idCaso: number;
-  id: string;
+  id: string; // numero secuencial del cliente (1, 2, 3...)
+  codigo: string; // codigo completo del caso, ej. SUG-INS-15
   tipoCaso: string;
   sucursal: string;
   motivo: string;
@@ -85,7 +86,7 @@ export class ConsultarCasosComponent implements OnInit {
   mensajeErrorReapertura: string = '';
   mensajeExitoReapertura: string = '';
 
-  constructor(private casoService: CasoService, private fb: FormBuilder) {}
+  constructor(private casoService: CasoService, private fb: FormBuilder, private router: Router) {}
 
   ngOnInit(): void {
     this.evaluacionForm = this.fb.group({
@@ -102,10 +103,11 @@ export class ConsultarCasosComponent implements OnInit {
 
   // CU-06
   cargarCasos(): void {
-    this.casoService.misCasos().subscribe(casosApi => {
+    this.casoService.misCasos().subscribe({ next: casosApi => {
       this.casos = casosApi.map(c => ({
         idCaso: c.idCaso,
-        id: c.identificadorVisible,
+        id: String(c.numeroCliente ?? c.idCaso),
+        codigo: c.identificadorVisible,
         tipoCaso: c.tipoCaso.nombre,
         sucursal: c.sucursal.nombreSucursal,
         motivo: c.categoriaCaso?.nombre ?? 'No aplica',
@@ -124,15 +126,24 @@ export class ConsultarCasosComponent implements OnInit {
       this.estadosDisponibles = ['Todos', ...new Set(this.casos.map(c => c.estado))];
       this.tiposCaso = ['Todos', ...new Set(this.casos.map(c => c.tipoCaso))];
       this.aplicarFiltros();
-    });
+    },
+    // Sin sesión activa (o sesión vencida) se lleva al usuario a la pantalla de acceso (CU-00).
+    error: (err) => {
+      if (err.status === 401) {
+        localStorage.clear();
+        this.router.navigate(['/login']);
+      }
+    } });
   }
 
   aplicarFiltros(): void {
     this.casosFiltrados = this.casos.filter(caso => {
       const cumpleEstado = this.filtroEstado === 'Todos' || caso.estado === this.filtroEstado;
       const cumpleTipo = this.filtroTipoCaso === 'Todos' || caso.tipoCaso === this.filtroTipoCaso;
-      const cumpleDesde = !this.filtroFechaDesde || caso.fechaCreacion >= this.filtroFechaDesde;
-      const cumpleHasta = !this.filtroFechaHasta || caso.fechaCreacion <= this.filtroFechaHasta;
+      // Se compara solo la parte de fecha (AAAA-MM-DD): el rango incluye el día final completo.
+      const fechaCaso = (caso.fechaCreacion ?? '').substring(0, 10);
+      const cumpleDesde = !this.filtroFechaDesde || fechaCaso >= this.filtroFechaDesde;
+      const cumpleHasta = !this.filtroFechaHasta || fechaCaso <= this.filtroFechaHasta;
       return cumpleEstado && cumpleTipo && cumpleDesde && cumpleHasta;
     });
   }
@@ -191,13 +202,19 @@ export class ConsultarCasosComponent implements OnInit {
   }
 
   // Paso 3: la opción "Cancelar caso" se ofrece mientras el caso siga abierto; FA01 la rechaza si ya está en atención.
+  // La opcion solo se ofrece cuando el caso es cancelable (Nuevo o En espera, sin responsable).
+  // En cualquier otro estado no se muestra y el servidor tambien rechaza el intento (FA01).
   mostrarOpcionCancelar(caso: Caso): boolean {
-    return ['nuevo', 'en espera', 'en proceso', 'reapertura solicitada'].includes(caso.estado?.toLowerCase());
+    return this.puedeCancelar(caso);
   }
+
+  // Indica si la cancelación se inició desde la ventana de detalle (para volver a ella con “No”).
+  private cancelacionDesdeDetalle = false;
 
   abrirModalCancelar(caso: Caso): void {
     this.mensajeAccion = '';
     this.errorAccion = '';
+    this.cancelacionDesdeDetalle = this.mostrarModalDetalle;
     this.casoSeleccionado = caso;
 
     // FA01: el caso ya fue asignado o está en atención
@@ -218,11 +235,12 @@ export class ConsultarCasosComponent implements OnInit {
     this.errorMotivoCancelacion = '';
   }
 
-  // FA02: el usuario selecciona "No": se informa y se retorna al detalle del caso.
+  // FA02: el usuario selecciona "No": se cierra la ventana, el caso no cambia y se informa.
+  // Si la cancelación se inició desde el detalle del caso, se regresa a esa ventana.
   declinarCancelacion(): void {
     this.cerrarModalCancelar();
     this.mensajeAccion = 'Se ha cancelado la operación satisfactoriamente';
-    this.mostrarModalDetalle = true;
+    this.mostrarModalDetalle = this.cancelacionDesdeDetalle;
   }
 
   // Pasos 7 a 11: el usuario selecciona "Sí".
@@ -268,6 +286,8 @@ export class ConsultarCasosComponent implements OnInit {
   }
 
   abrirModalEvaluar(caso: Caso): void {
+    this.mensajeAccion = '';
+    this.errorAccion = '';
     this.casoSeleccionado = caso;
     this.mensajeErrorEvaluar = '';
     this.mensajeExitoEvaluar = '';
@@ -344,6 +364,8 @@ export class ConsultarCasosComponent implements OnInit {
   }
 
   abrirModalReapertura(caso: Caso): void {
+    this.mensajeAccion = '';
+    this.errorAccion = '';
     this.casoSeleccionado = caso;
     this.mensajeErrorReapertura = '';
     this.mensajeExitoReapertura = '';
@@ -355,7 +377,7 @@ export class ConsultarCasosComponent implements OnInit {
     // FA01: se valida el plazo de 15 días con la fecha de cierre real del caso.
     this.cargarDetalle(caso, () => {
       if (this.estaPlazoReaperturaVencido(caso)) {
-        this.mensajeErrorReapertura = 'El plazo para solicitar la reapertura ha vencido. Puede registrar un nuevo caso (CU-05)';
+        this.mensajeErrorReapertura = 'El plazo para solicitar la reapertura ha vencido. Puede registrar un nuevo caso (CU-02)';
       }
     });
   }
@@ -378,6 +400,7 @@ export class ConsultarCasosComponent implements OnInit {
         input.value = '';
         return;
       }
+      this.mensajeErrorReapertura = '';
       this.archivoReaperturaNombre = archivo.name;
       this.archivoReapertura = archivo;
     }

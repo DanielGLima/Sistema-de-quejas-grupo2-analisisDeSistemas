@@ -85,6 +85,14 @@ export class GestionarCasosComponent implements OnInit {
   notificaciones: NotificacionApi[] = [];
   bitacora: BitacoraApi[] = [];
 
+  // Filtros de la bitácora de auditoría (todos opcionales).
+  bitFechaDesde = '';
+  bitFechaHasta = '';
+  bitAccion = '';
+  bitModulo = '';
+  bitTipoActor = '';
+  mensajeErrorBitacora = '';
+
   // Catálogos
   empleados: Personal[] = [];
   empleadosReasignables: Personal[] = [];
@@ -510,10 +518,45 @@ export class GestionarCasosComponent implements OnInit {
 
   private refrescarBitacora(): void {
     if (!this.esAdminRol()) return;
-    this.adminService.bitacora().subscribe({
+    this.mensajeErrorBitacora = '';
+
+    // Criterios inválidos: se indica cómo corregirlos.
+    if (!this.fechaValida(this.bitFechaDesde)) {
+      this.mensajeErrorBitacora = 'La fecha inicial es inválida. Use el formato DD/MM/AAAA';
+      return;
+    }
+    if (!this.fechaValida(this.bitFechaHasta)) {
+      this.mensajeErrorBitacora = 'La fecha final es inválida. Use el formato DD/MM/AAAA';
+      return;
+    }
+
+    this.adminService.bitacora({
+      fechaInicial: this.bitFechaDesde,
+      fechaFinal: this.bitFechaHasta,
+      accion: this.bitAccion.trim(),
+      modulo: this.bitModulo.trim(),
+      tipoActor: this.bitTipoActor
+    }).subscribe({
       next: (lista) => this.bitacora = lista,
-      error: () => this.bitacora = []
+      error: (err) => {
+        this.bitacora = [];
+        this.mensajeErrorBitacora = err.error?.message ?? 'No se pudo consultar la bitácora';
+      }
     });
+  }
+
+  buscarBitacora(): void {
+    this.registroAuditoriaSeleccionado = null;
+    this.refrescarBitacora();
+  }
+
+  limpiarFiltrosBitacora(): void {
+    this.bitFechaDesde = '';
+    this.bitFechaHasta = '';
+    this.bitAccion = '';
+    this.bitModulo = '';
+    this.bitTipoActor = '';
+    this.buscarBitacora();
   }
 
   // El rol puede no estar cargado aún al primer refresco; se consulta el guardado como respaldo.

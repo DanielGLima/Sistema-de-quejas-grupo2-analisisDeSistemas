@@ -22,6 +22,9 @@ export class AdministrarComponent implements OnInit {
   mensajeExito = '';
   mensajeError = '';
 
+  // Ventana propia de confirmación (advertencia por casos activos asociados).
+  advertenciaPendiente: { mensaje: string; confirmar: () => void } | null = null;
+
   personal: Personal[] = [];
   roles: RolApi[] = [];
   sucursales: Sucursal[] = [];
@@ -199,6 +202,17 @@ export class AdministrarComponent implements OnInit {
     this.alternarCatalogo('estados', e.idEstado, e.activo, { nombre: e.nombre });
   }
 
+  // Botones de la ventana de advertencia: “Sí, desactivar” confirma y “Cancelar” descarta.
+  confirmarAdvertencia(): void {
+    const pendiente = this.advertenciaPendiente;
+    this.advertenciaPendiente = null;
+    pendiente?.confirmar();
+  }
+
+  cancelarAdvertencia(): void {
+    this.advertenciaPendiente = null;
+  }
+
   private alternarCatalogo(catalogo: CatalogoApi, id: number, activoActual: boolean, base: CatalogoRequest, confirmar = false): void {
     this.limpiarMensajes();
     this.admin.guardarCatalogo(catalogo, id, { ...base, activo: !activoActual }, confirmar).subscribe({
@@ -206,9 +220,10 @@ export class AdministrarComponent implements OnInit {
       error: (err) => {
         const mensaje: string = err.error?.message ?? '';
         if (err.status === 409 && mensaje.startsWith('Advertencia') && !confirmar) {
-          if (confirm(`${mensaje}\n\n¿Desea continuar?`)) {
-            this.alternarCatalogo(catalogo, id, activoActual, base, true);
-          }
+          this.advertenciaPendiente = {
+            mensaje,
+            confirmar: () => this.alternarCatalogo(catalogo, id, activoActual, base, true)
+          };
           return;
         }
         this.fallo(err, 'No se pudo cambiar el estado del elemento');

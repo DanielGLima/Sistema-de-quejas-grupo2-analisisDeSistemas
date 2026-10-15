@@ -42,12 +42,17 @@ CU-12 → CU-08; CU-13 → CU-09; CU-14 y CU-15 → CU-10.
 | FA08 a FA18 | CU-02 FA01 a FA11 (FA10 = “Correo no registrado”, por decisión del equipo) |
 | FA19 / FA20 / FA21 | CU-03 FA01 / FA02 / FA03 |
 
-**CU-07** (flujo 1 = gestionar estado, flujo 2 = responder)
+**CU-07** (flujo 1 = gestionar estado, flujo 2 = responder, flujo 3 = reasignar, flujo 4 = aprobar respuesta de un Operador)
 
 | Nuevo | Original |
 |---|---|
 | FA01 a FA04 | CU-10 FA01 a FA04 |
-| FA05 / FA06 / FA07 | CU-11 FA01 / FA02 / FA03 |
+| FA05 | CU-11 FA01 (respuesta de un Operador, pendiente de aprobación) |
+| FA06 | Nuevo: estado no seleccionado al guardar la gestión |
+| FA07 / FA08 | CU-11 FA02 / FA03 |
+| FA09 | Nuevo: Operador intenta responder un caso que no es suyo |
+| FA10 a FA13 | Nuevos: reasignación (sin responsable, motivo incompleto, mismo responsable, caso no reasignable) |
+| FA14 | Nuevo: la respuesta ya no está pendiente de aprobación |
 
 **CU-10** (flujo 1 = notificaciones, flujo 2 = bitácora, flujo 3 = consulta de bitácora)
 
@@ -57,7 +62,11 @@ CU-12 → CU-08; CU-13 → CU-09; CU-14 y CU-15 → CU-10.
 | FA03 / FA04 | CU-15 FA01 / FA02 |
 | FA05 | Nuevo: consulta de la bitácora sin permisos |
 
-El resto de casos (CU-02 a CU-06, CU-08 y CU-09) conserva la numeración de sus flujos alternos; CU-02 agrega FA05 (nombre del empleado).
+El resto de casos conserva la numeración original de sus flujos alternos, con estas incorporaciones: CU-02 agrega FA05 (nombre del empleado); CU-03 agrega FA02 (los filtros no encuentran casos); CU-04 agrega FA03 (motivo demasiado largo); CU-06 agrega FA03 (evidencia no válida); CU-10 agrega FA06 (aún no hay registros).
+
+## Versión 2.1 (redacción fluida)
+
+Los 11 documentos se reescribieron con una redacción más natural, que nombra los botones, apartados y ventanas tal como aparecen en la pantalla (por ejemplo “Crear nueva cuenta”, “Registrar Usuario”, “Gestionar”, “Confirmar Reasignación”), e incorporan los flujos de reasignación y de aprobación de respuestas que antes no estaban descritos.
 
 ## Cambios de contenido respecto de la versión 1.0
 

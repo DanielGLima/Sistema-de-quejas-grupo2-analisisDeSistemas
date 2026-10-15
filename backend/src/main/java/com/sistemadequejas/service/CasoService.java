@@ -82,6 +82,16 @@ public class CasoService {
         return casoRepository.findByUsuarioOrderByFechaCreacionDesc(usuario);
     }
 
+    // Asigna a cada caso su numero secuencial dentro de los casos del cliente (1 = el mas antiguo).
+    public void numerarParaCliente(List<Caso> casosDelCliente) {
+        List<Caso> ascendente = casosDelCliente.stream()
+                .sorted(java.util.Comparator.comparing(Caso::getFechaCreacion).thenComparing(Caso::getIdCaso))
+                .toList();
+        for (int i = 0; i < ascendente.size(); i++) {
+            ascendente.get(i).setNumeroCliente(i + 1);
+        }
+    }
+
     public Optional<Caso> findById(Integer id) {
         return casoRepository.findById(id);
     }
@@ -182,7 +192,7 @@ public class CasoService {
         LocalDateTime fechaCierre = fechaDeCierre(caso);
         if (Duration.between(fechaCierre, LocalDateTime.now()).toDays() > PLAZO_REAPERTURA_DIAS) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "El plazo para solicitar la reapertura ha vencido. Puede registrar un nuevo caso (CU-05)");
+                    "El plazo para solicitar la reapertura ha vencido. Puede registrar un nuevo caso (CU-02)");
         }
 
         String urlEvidencia = null;

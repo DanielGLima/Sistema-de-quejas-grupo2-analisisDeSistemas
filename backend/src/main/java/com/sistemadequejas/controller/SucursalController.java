@@ -11,8 +11,6 @@ import java.util.List;
 // Solo lectura publica (sucursales activas). La administracion es CU-13 (/api/admin/catalogos).
 @RestController
 @RequestMapping("/api/sucursales")
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-
 public class SucursalController {
 
   @Autowired

@@ -116,9 +116,9 @@ export class RegistrarCasoComponent implements OnInit {
 
     const { idTipoCaso, idSucursal, idCategoria, descripcion, numeroFactura, nombreEmpleadoInvolucrado, esAnonimo } = this.casoForm.value;
 
-    // Paso 4: Validación de campos obligatorios y evidencia adjunta
+    // Paso 4: Validación de campos obligatorios (la evidencia adjunta es opcional)
     // FA01: Campos obligatorios incompletos o vacíos
-    if (!idTipoCaso || !idSucursal || !idCategoria || !descripcion || descripcion.trim().length < 10 || this.archivosSeleccionados.length === 0) {
+    if (!idTipoCaso || !idSucursal || !idCategoria || !descripcion || descripcion.trim().length < 10) {
       this.casoForm.markAllAsTouched();
       this.mensajeError = 'Debe ingresar los campos obligatorios';
       return;

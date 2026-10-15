@@ -138,6 +138,9 @@
 
     <div class="modal-body">
       <div class="detail-row">
+        <strong>código del caso:</strong> <span class="codigo-caso">{{ casoSeleccionado.codigo }}</span>
+      </div>
+      <div class="detail-row">
         <strong>tipo de caso:</strong> <span>{{ casoSeleccionado.tipoCaso }}</span>
       </div>
       <div class="detail-row">
@@ -221,7 +224,7 @@
         *ngIf="puedeEvaluar(casoSeleccionado)" 
         type="button" 
         class="btn btn-evaluar-primary" 
-        (click)="cerrarModal(); abrirModalEvaluar(casoSeleccionado)">
+        (click)="abrirModalEvaluar(casoSeleccionado); mostrarModalDetalle = false">
         Evaluar atención
       </button>
 
@@ -229,7 +232,7 @@
         *ngIf="puedeSolicitarReapertura(casoSeleccionado)" 
         type="button" 
         class="btn btn-warning" 
-        (click)="cerrarModal(); abrirModalReapertura(casoSeleccionado)">
+        (click)="abrirModalReapertura(casoSeleccionado); mostrarModalDetalle = false">
         Solicitar reapertura </button>
 
       <button type="button" class="btn btn-secondary" (click)="cerrarModal()">Cerrar</button>
@@ -252,7 +255,7 @@
 
       <div class="form-group-cancel">
         <label for="motivoCancel">Motivo de cancelación (opcional, máximo 250 caracteres):</label>
-        <textarea id="motivoCancel" rows="3" maxlength="250" [(ngModel)]="motivoCancelacion" placeholder="Ingrese el motivo de la cancelación...">
+        <textarea id="motivoCancel" rows="3" [(ngModel)]="motivoCancelacion" (ngModelChange)="errorMotivoCancelacion = ''" placeholder="Ingrese el motivo de la cancelación...">
         </textarea>
         <small class="error-msg" *ngIf="errorMotivoCancelacion">
           {{ errorMotivoCancelacion }}
@@ -277,7 +280,7 @@
 
     <div class="modal-body">
       <p class="modal-case-ref">
-        Caso No: <strong>{{ casoSeleccionado.id }}</strong> — {{ casoSeleccionado.motivo }}
+        Caso No: <strong>{{ casoSeleccionado.id }}</strong> — {{ casoSeleccionado.tipoCaso }}
       </p>
 
       <div *ngIf="mensajeErrorEvaluar" class="alert alert-danger">

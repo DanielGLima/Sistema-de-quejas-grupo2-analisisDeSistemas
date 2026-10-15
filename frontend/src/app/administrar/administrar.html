@@ -177,7 +177,7 @@
 
     <!-- ===================== Estados (catálogo maestro) ===================== -->
     <section *ngIf="pestana === 'estados'">
-      <p class="nota">Catálogo maestro del flujo de atención. Los estados forman parte del proceso (CU-10) y no se pueden renombrar ni desactivar.</p>
+      <p class="nota">Catálogo maestro del flujo de atención. Los estados forman parte del proceso de atención y no se pueden renombrar ni desactivar.</p>
       <table class="tabla">
         <thead><tr><th>Orden</th><th>Estado</th><th>Situación</th></tr></thead>
         <tbody>
@@ -189,5 +189,18 @@
         </tbody>
       </table>
     </section>
+  </div>
+</div>
+
+<!-- Ventana de advertencia: desactivar un elemento con casos activos asociados -->
+<div *ngIf="advertenciaPendiente" class="modal-fondo" role="dialog" aria-modal="true" aria-labelledby="tituloAdvertencia">
+  <div class="modal-caja">
+    <h3 id="tituloAdvertencia">Confirmar desactivación</h3>
+    <p>{{ advertenciaPendiente.mensaje }}</p>
+    <p class="modal-pregunta">¿Desea continuar?</p>
+    <div class="modal-acciones">
+      <button type="button" class="btn secondary" (click)="cancelarAdvertencia()">Cancelar</button>
+      <button type="button" class="btn primary" (click)="confirmarAdvertencia()">Sí, desactivar</button>
+    </div>
   </div>
 </div>
