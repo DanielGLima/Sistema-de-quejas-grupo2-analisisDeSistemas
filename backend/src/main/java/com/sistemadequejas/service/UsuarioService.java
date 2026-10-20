@@ -1,6 +1,7 @@
 package com.sistemadequejas.service;
 
 import com.sistemadequejas.model.Usuario;
+import com.sistemadequejas.repository.NacionalidadRepository;
 import com.sistemadequejas.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -34,6 +35,9 @@ public class UsuarioService {
     private UsuarioRepository usuarioRepository;
 
     @Autowired
+    private NacionalidadRepository nacionalidadRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     // Valida longitud (6 a 20) y formato de una contrasena nueva; el texto del formato depende del caso de uso.
@@ -52,11 +56,13 @@ public class UsuarioService {
                 || !PATRON_SOLO_LETRAS.matcher(u.getNombreCompleto()).matches()) {
             return "nombre completo (solo letras, máximo 100 caracteres)";
         }
-        if (u.getFechaNacimiento() == null || u.getFechaNacimiento().isAfter(LocalDate.now())) {
-            return "fecha de nacimiento (formato dd/mm/aaaa, no puede ser posterior a hoy)";
+        if (u.getFechaNacimiento() == null || u.getFechaNacimiento().isAfter(LocalDate.now())
+                || u.getFechaNacimiento().isBefore(LocalDate.of(1900, 1, 1))) {
+            return "fecha de nacimiento (formato dd/mm/aaaa, no puede ser posterior a hoy ni anterior a 1900)";
         }
-        if (u.getNacionalidad() == null || u.getNacionalidad().isBlank() || u.getNacionalidad().length() > 50) {
-            return "nacionalidad (obligatoria, máximo 50 caracteres)";
+        if (u.getNacionalidad() == null || u.getNacionalidad().isBlank() || u.getNacionalidad().length() > 50
+                || !nacionalidadRepository.existsByNombreAndActivoTrue(u.getNacionalidad())) {
+            return "nacionalidad (debe ser una de las opciones del catálogo)";
         }
         if (u.getCorreo() == null || u.getCorreo().length() > 100 || !PATRON_CORREO.matcher(u.getCorreo()).matches()) {
             return "correo electrónico (formato válido, máximo 100 caracteres)";

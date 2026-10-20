@@ -138,11 +138,18 @@ public class AdminCasoController {
         if (texto == null || texto.isBlank()) {
             return null;
         }
+        LocalDate fecha;
         try {
-            return texto.contains("/") ? LocalDate.parse(texto.trim(), FORMATO_FECHA) : LocalDate.parse(texto.trim());
+            fecha = texto.contains("/") ? LocalDate.parse(texto.trim(), FORMATO_FECHA) : LocalDate.parse(texto.trim());
         } catch (DateTimeParseException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "La fecha " + etiqueta + " es inválida. Use el formato DD/MM/AAAA");
         }
+        // Los casos y los registros de bitacora no pueden ser posteriores a hoy.
+        if (fecha.isAfter(LocalDate.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "La fecha " + etiqueta + " no puede ser posterior a la fecha actual");
+        }
+        return fecha;
     }
 }

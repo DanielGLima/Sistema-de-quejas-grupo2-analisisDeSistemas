@@ -84,6 +84,27 @@ INSERT INTO categoria_caso (codigo, nombre) VALUES
     ('OTR', 'Otro')
 ON CONFLICT (codigo) DO NOTHING;
 
+-- Nacionalidades (CU-01 y CU-03)
+CREATE TABLE IF NOT EXISTS nacionalidad (
+    id_nacionalidad SERIAL PRIMARY KEY,
+    nombre          VARCHAR(50) NOT NULL UNIQUE,
+    activo          BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+INSERT INTO nacionalidad (nombre) VALUES
+    ('Guatemalteca'),
+    ('Mexicana'),
+    ('Salvadoreña'),
+    ('Hondureña'),
+    ('Nicaragüense'),
+    ('Costarricense'),
+    ('Panameña'),
+    ('Colombiana'),
+    ('Estadounidense'),
+    ('Otra')
+ON CONFLICT (nombre) DO NOTHING;
+
+
 -- catalogo_estado / catalogo_estado_caso (CU-10, CU-12)
 -- "orden" controla la secuencia valida del flujo (CU-10, FA01).
 CREATE TABLE IF NOT EXISTS estado_caso (

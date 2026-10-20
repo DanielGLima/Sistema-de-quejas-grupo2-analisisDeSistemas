@@ -37,7 +37,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> manejarCuerpoNoLegible(HttpMessageNotReadableException ex) {
         String detalle = String.valueOf(ex.getMessage());
         String mensaje = detalle.contains("LocalDate")
-                ? "Formato de datos no válido. Revise el campo: fecha de nacimiento (formato dd/mm/aaaa, no puede ser posterior a hoy)"
+                ? "Formato de datos no válido. Revise el campo: fecha de nacimiento (formato dd/mm/aaaa, no puede ser posterior a hoy ni anterior a 1900)"
                 : "Los datos enviados no tienen un formato válido";
 
         Map<String, Object> cuerpo = new LinkedHashMap<>();
