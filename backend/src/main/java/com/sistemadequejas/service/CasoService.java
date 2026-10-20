@@ -344,7 +344,7 @@ public class CasoService {
         String motivoLimpio = motivo == null ? "" : motivo.trim();
         if (motivoLimpio.length() < 10 || motivoLimpio.length() > 300) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Debe ingresar el motivo de la reasignación (mínimo 10 y máximo 300 caracteres)");
+                    "Debe ingresar el motivo de la reasignación (mínimo 10 caracteres)");
         }
         Personal nuevo = personalService.findById(idPersonalNuevo)
                 .filter(p -> Boolean.TRUE.equals(p.getActivo()))
