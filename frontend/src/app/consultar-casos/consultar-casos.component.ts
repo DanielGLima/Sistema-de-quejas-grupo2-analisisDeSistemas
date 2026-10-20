@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { NavbarComponent } from '../shared/navbar/navbar';
 import { CasoService } from '../services/caso.service';
@@ -90,12 +90,12 @@ export class ConsultarCasosComponent implements OnInit {
 
   ngOnInit(): void {
     this.evaluacionForm = this.fb.group({
-      calificacion: [0, [Validators.required, Validators.min(1), Validators.max(5)]],
-      comentarios: ['', [Validators.maxLength(500)]]
+      calificacion: [0],
+      comentarios: ['']
     });
 
     this.reaperturaForm = this.fb.group({
-      motivo: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(500)]]
+      motivo: ['']
     });
 
     this.cargarCasos();
@@ -248,12 +248,6 @@ export class ConsultarCasosComponent implements OnInit {
     if (!this.casoSeleccionado) return;
     const motivoLimpio = this.motivoCancelacion.trim();
 
-    // Paso 5: el motivo es opcional (máximo 250 caracteres)
-    if (motivoLimpio.length > 250) {
-      this.errorMotivoCancelacion = 'El motivo de cancelación no puede superar los 250 caracteres';
-      return;
-    }
-
     this.casoService.cancelar(this.casoSeleccionado.idCaso, motivoLimpio).subscribe({
       next: (casoApi) => {
         if (this.casoSeleccionado) {
@@ -272,6 +266,11 @@ export class ConsultarCasosComponent implements OnInit {
         this.mensajeAccion = 'El caso fue cancelado satisfactoriamente';
       },
       error: (err) => {
+        // Dato inválido (por ejemplo, motivo demasiado largo): se corrige en la misma ventana
+        if (err.status === 400) {
+          this.errorMotivoCancelacion = err.error?.message ?? 'No se pudo cancelar el caso';
+          return;
+        }
         // FA01: el caso ya está en atención y no puede cancelarse
         this.cerrarModalCancelar();
         this.mostrarModalDetalle = false;
@@ -310,11 +309,6 @@ export class ConsultarCasosComponent implements OnInit {
     this.mensajeExitoEvaluar = '';
     const calificacion = this.evaluacionForm.get('calificacion')?.value;
     const comentarios = this.evaluacionForm.get('comentarios')?.value || '';
-
-    if (!calificacion || calificacion < 1 || calificacion > 5) {
-      this.mensajeErrorEvaluar = 'Debe seleccionar una calificación para continuar';
-      return;
-    }
 
     if (this.casoSeleccionado) {
       this.casoService.evaluar(this.casoSeleccionado.idCaso, calificacion, comentarios.trim()).subscribe({
@@ -355,13 +349,6 @@ export class ConsultarCasosComponent implements OnInit {
     return caso.estado?.toLowerCase() === 'cerrado';
   }
 
-  estaPlazoReaperturaVencido(caso: Caso): boolean {
-    if (!caso.fechaCierre) return false;
-    // El plazo vence cuando pasan mas de 15 dias exactos (360 horas) desde la fecha y hora del cierre.
-    const limite = new Date(caso.fechaCierre).getTime() + 15 * 24 * 60 * 60 * 1000;
-    return Date.now() > limite;
-  }
-
   abrirModalReapertura(caso: Caso): void {
     this.mensajeAccion = '';
     this.errorAccion = '';
@@ -372,13 +359,6 @@ export class ConsultarCasosComponent implements OnInit {
     this.archivoReapertura = null;
     this.reaperturaForm.reset({ motivo: '' });
     this.mostrarModalReapertura = true;
-
-    // FA01: se valida el plazo de 15 días con la fecha de cierre real del caso.
-    this.cargarDetalle(caso, () => {
-      if (this.estaPlazoReaperturaVencido(caso)) {
-        this.mensajeErrorReapertura = 'El plazo para solicitar la reapertura ha vencido. Puede registrar un nuevo caso (CU-02)';
-      }
-    });
   }
 
   cerrarModalReapertura(): void {
@@ -393,12 +373,6 @@ export class ConsultarCasosComponent implements OnInit {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
       const archivo = input.files[0];
-      const formatosPermitidos = ['image/jpeg', 'image/png', 'application/pdf'];
-      if (!formatosPermitidos.includes(archivo.type) || archivo.size > 2 * 1024 * 1024) {
-        this.mensajeErrorReapertura = 'El archivo adjunto supera los 2 MB o no corresponde a un formato permitido (PDF/Imagen)';
-        input.value = '';
-        return;
-      }
       this.mensajeErrorReapertura = '';
       this.archivoReaperturaNombre = archivo.name;
       this.archivoReapertura = archivo;
@@ -409,12 +383,7 @@ export class ConsultarCasosComponent implements OnInit {
     this.mensajeErrorReapertura = '';
     this.mensajeExitoReapertura = '';
     if (!this.casoSeleccionado) return;
-    const motivo = this.reaperturaForm.get('motivo')?.value?.trim();
-
-    if (!motivo || motivo.length < 10) {
-      this.mensajeErrorReapertura = 'Debe ingresar los campos obligatorios: Motivo de reapertura';
-      return;
-    }
+    const motivo = this.reaperturaForm.get('motivo')?.value?.trim() || '';
 
     const caso = this.casoSeleccionado;
     this.casoService.solicitarReapertura(caso.idCaso, motivo, this.archivoReapertura).subscribe({

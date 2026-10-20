@@ -12,6 +12,7 @@ public class RegistroRequest {
     private String telefono;
     private String direccion;
     private String password;
+    private String confirmacionPassword;
 
     public String getNombreCompleto() {
         return nombreCompleto;
@@ -75,5 +76,13 @@ public class RegistroRequest {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getConfirmacionPassword() {
+        return confirmacionPassword;
+    }
+
+    public void setConfirmacionPassword(String confirmacionPassword) {
+        this.confirmacionPassword = confirmacionPassword;
     }
 }

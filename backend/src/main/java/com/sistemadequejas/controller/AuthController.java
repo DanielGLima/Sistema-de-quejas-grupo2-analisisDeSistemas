@@ -66,6 +66,26 @@ public class AuthController {
     // CU-01: crea la cuenta de cliente.
     @PostMapping("/registro")
     public ResponseEntity<Usuario> registro(@RequestBody RegistroRequest request) {
+        Usuario creado = usuarioService.registrar(datosDeRegistro(request), request.getPassword(), request.getConfirmacionPassword());
+        return ResponseEntity.status(HttpStatus.CREATED).body(creado);
+    }
+
+    // CU-01 paso 4: valida los datos personales (FA01 y FA01.1) antes de pedir la contrasena.
+    @PostMapping("/registro/validar-datos")
+    public ResponseEntity<Void> registroValidarDatos(@RequestBody RegistroRequest request) {
+        usuarioService.validarDatosRegistro(datosDeRegistro(request));
+        return ResponseEntity.noContent().build();
+    }
+
+    // CU-01 paso 6: valida la contrasena y su confirmacion (FA03, FA04 y FA05) antes de confirmar.
+    @PostMapping("/registro/validar-password")
+    public ResponseEntity<Void> registroValidarPassword(@RequestBody RegistroRequest request) {
+        usuarioService.validarPasswordNueva(request.getPassword(), request.getConfirmacionPassword(),
+                UsuarioService.MSG_FORMATO_PASSWORD_CU01);
+        return ResponseEntity.noContent().build();
+    }
+
+    private Usuario datosDeRegistro(RegistroRequest request) {
         Usuario usuario = new Usuario();
         usuario.setNombreCompleto(request.getNombreCompleto());
         usuario.setFechaNacimiento(request.getFechaNacimiento());
@@ -74,9 +94,7 @@ public class AuthController {
         usuario.setCodigoArea(request.getCodigoArea());
         usuario.setTelefono(request.getTelefono());
         usuario.setDireccion(request.getDireccion());
-
-        Usuario creado = usuarioService.registrar(usuario, request.getPassword());
-        return ResponseEntity.status(HttpStatus.CREATED).body(creado);
+        return usuario;
     }
 
     // CU-00: una sola pantalla de acceso para clientes y personal interno.
@@ -211,6 +229,16 @@ public class AuthController {
     // en lugar del mensaje neutro del FA03 original; el documento CU-02 se actualizo en ese sentido.
     @PostMapping("/recuperar/solicitar")
     public ResponseEntity<Map<String, String>> recuperarSolicitar(@RequestBody RecuperarSolicitarRequest request) {
+        String correoIngresado = request.getCorreo() == null ? "" : request.getCorreo().trim();
+        // FA08 y FA09: correo vacio o con formato invalido.
+        if (correoIngresado.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe ingresar un correo electrónico");
+        }
+        if (correoIngresado.length() > 100 || !PATRON_EMAIL.matcher(correoIngresado).matches()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe ingresar un correo electrónico válido");
+        }
+        request.setCorreo(correoIngresado);
+
         Usuario usuario = usuarioService.buscarPorCorreo(request.getCorreo())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Correo no registrado"));
 
@@ -233,6 +261,23 @@ public class AuthController {
     // CU-02 pasos 6 a 9: valida el codigo y aplica la nueva contrasena.
     @PostMapping("/recuperar/confirmar")
     public ResponseEntity<Void> recuperarConfirmar(@RequestBody RecuperarConfirmarRequest request) {
+        // FA11 y FA12: codigo vacio o de longitud distinta de 6.
+        String codigoIngresado = request.getCodigo() == null ? "" : request.getCodigo().trim();
+        if (codigoIngresado.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe ingresar el código de recuperación");
+        }
+        if (codigoIngresado.length() != 6) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El código de recuperación ingresado es incorrecto");
+        }
+        request.setCodigo(codigoIngresado);
+        // FA14: contrasena o confirmacion vacias. FA15 a FA17: longitud, formato y coincidencia.
+        if (request.getPasswordNueva() == null || request.getPasswordNueva().isEmpty()
+                || (request.getConfirmacionPassword() != null && request.getConfirmacionPassword().isEmpty())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe ingresar y confirmar su nueva contraseña");
+        }
+        usuarioService.validarPasswordNueva(request.getPasswordNueva(), request.getConfirmacionPassword(),
+                UsuarioService.MSG_FORMATO_PASSWORD_CU02);
+
         Usuario usuario = usuarioService.buscarPorCorreo(request.getCorreo())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El código de recuperación ingresado es incorrecto"));
 

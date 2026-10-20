@@ -1,6 +1,8 @@
 package com.sistemadequejas.config;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
@@ -27,5 +29,20 @@ public class GlobalExceptionHandler {
         cuerpo.put("message", ex.getReason() != null ? ex.getReason() : "Ocurrio un error inesperado");
 
         return ResponseEntity.status(ex.getStatusCode()).body(cuerpo);
+    }
+
+    // Cuerpo con un tipo o formato que no se puede leer (por ejemplo una fecha mal escrita): el backend
+    // es quien decide el mensaje, el frontend no valida formatos.
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> manejarCuerpoNoLegible(HttpMessageNotReadableException ex) {
+        String detalle = String.valueOf(ex.getMessage());
+        String mensaje = detalle.contains("LocalDate")
+                ? "Formato de datos no válido. Revise el campo: fecha de nacimiento (formato dd/mm/aaaa, no puede ser posterior a hoy)"
+                : "Los datos enviados no tienen un formato válido";
+
+        Map<String, Object> cuerpo = new LinkedHashMap<>();
+        cuerpo.put("status", HttpStatus.BAD_REQUEST.value());
+        cuerpo.put("message", mensaje);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(cuerpo);
     }
 }

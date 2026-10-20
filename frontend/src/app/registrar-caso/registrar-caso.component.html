@@ -56,7 +56,6 @@
           <input
             id="numeroFactura"
             type="text"
-            maxlength="20"
             placeholder="Solo letras y números"
             formControlName="numeroFactura"
           />
@@ -68,10 +67,8 @@
           <input
             id="nombreEmpleadoInvolucrado"
             type="text"
-            maxlength="100"
             placeholder="Solo letras"
             formControlName="nombreEmpleadoInvolucrado"
-            (input)="soloTexto($event)"
           />
         </div>
       </div>
@@ -82,7 +79,6 @@
         <textarea
           id="descripcion"
           rows="4"
-          maxlength="1000"
           placeholder="Describa detalladamente lo sucedido (mínimo 10 caracteres)..."
           formControlName="descripcion">
         </textarea>

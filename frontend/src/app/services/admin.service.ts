@@ -52,7 +52,7 @@ export class AdminService {
     return this.http.put<CasoAdminApi>(`${ADMIN}/casos/${idCaso}/gestion`, datos, OPTS);
   }
 
-  reasignar(idCaso: number, datos: { idPersonalNuevo: number; motivo: string; fechaActualizacion: string }): Observable<CasoAdminApi> {
+  reasignar(idCaso: number, datos: { idPersonalNuevo: number | null; motivo: string; fechaActualizacion: string }): Observable<CasoAdminApi> {
     return this.http.put<CasoAdminApi>(`${ADMIN}/casos/${idCaso}/reasignar`, datos, OPTS);
   }
 

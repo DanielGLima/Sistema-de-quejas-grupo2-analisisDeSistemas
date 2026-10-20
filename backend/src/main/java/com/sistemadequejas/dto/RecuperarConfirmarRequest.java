@@ -5,6 +5,7 @@ public class RecuperarConfirmarRequest {
     private String correo;
     private String codigo;
     private String passwordNueva;
+    private String confirmacionPassword;
 
     public String getCorreo() {
         return correo;
@@ -28,5 +29,13 @@ public class RecuperarConfirmarRequest {
 
     public void setPasswordNueva(String passwordNueva) {
         this.passwordNueva = passwordNueva;
+    }
+
+    public String getConfirmacionPassword() {
+        return confirmacionPassword;
+    }
+
+    public void setConfirmacionPassword(String confirmacionPassword) {
+        this.confirmacionPassword = confirmacionPassword;
     }
 }

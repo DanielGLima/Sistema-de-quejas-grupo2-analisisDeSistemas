@@ -40,12 +40,12 @@
 
         <div class="filter-item">
           <label for="filtroIdentificador">Código del caso (máx. 20):</label>
-          <input type="text" id="filtroIdentificador" name="identificador" [(ngModel)]="filtroIdentificador" maxlength="20" />
+          <input type="text" id="filtroIdentificador" name="identificador" [(ngModel)]="filtroIdentificador"  />
         </div>
 
         <div class="filter-item">
           <label for="filtroCorreo">Correo del usuario (máx. 100):</label>
-          <input type="text" id="filtroCorreo" name="correo" [(ngModel)]="filtroCorreo" maxlength="100" />
+          <input type="text" id="filtroCorreo" name="correo" [(ngModel)]="filtroCorreo"  />
         </div>
 
         <div class="filter-item">
@@ -91,12 +91,12 @@
 
         <div class="filter-item">
           <label for="filtroDesde">Fecha inicial:</label>
-          <input type="text" id="filtroDesde" name="desde" maxlength="10" placeholder="DD/MM/AAAA" inputmode="numeric" [ngModel]="filtroFechaDesde" (ngModelChange)="filtroFechaDesde = mascaraFecha($event)" />
+          <input type="text" id="filtroDesde" name="desde"  placeholder="DD/MM/AAAA" inputmode="numeric" [(ngModel)]="filtroFechaDesde" />
         </div>
 
         <div class="filter-item">
           <label for="filtroHasta">Fecha final:</label>
-          <input type="text" id="filtroHasta" name="hasta" maxlength="10" placeholder="DD/MM/AAAA" inputmode="numeric" [ngModel]="filtroFechaHasta" (ngModelChange)="filtroFechaHasta = mascaraFecha($event)" />
+          <input type="text" id="filtroHasta" name="hasta"  placeholder="DD/MM/AAAA" inputmode="numeric" [(ngModel)]="filtroFechaHasta" />
         </div>
 
         <div class="filter-item">
@@ -269,8 +269,7 @@
           <textarea 
             id="notas" 
             rows="3" 
-            formControlName="notasInternas" 
-            maxlength="500" 
+            formControlName="notasInternas"  
             placeholder="Ingrese anotaciones internas...">
           </textarea>
           <small class="char-count">{{ gestionForm.get('notasInternas')?.value?.length || 0 }} / 500</small>
@@ -309,8 +308,7 @@
           <input 
             type="text" 
             id="tituloRespuesta" 
-            formControlName="titulo" 
-            maxlength="100" 
+            formControlName="titulo"  
             placeholder="Ej. Resolución formal sobre la orden y compensación aplicada" />
           <small class="char-count">{{ respuestaForm.get('titulo')?.value?.length || 0 }} / 100</small>
         </div>
@@ -320,8 +318,7 @@
           <textarea 
             id="cuerpoRespuesta" 
             rows="4" 
-            formControlName="cuerpo" 
-            maxlength="1000" 
+            formControlName="cuerpo"  
             placeholder="Describa de forma clara las medidas adoptadas (mínimo 20 caracteres)...">
           </textarea>
           <small class="char-count">{{ respuestaForm.get('cuerpo')?.value?.length || 0 }} / 1000 (mín. 20)</small>
@@ -332,8 +329,7 @@
           <input 
             type="text" 
             id="compensacion" 
-            formControlName="compensacion" 
-            maxlength="300" 
+            formControlName="compensacion"  
             placeholder="Ej. Emisión de cupón o cortesía" />
           <small class="char-count">{{ respuestaForm.get('compensacion')?.value?.length || 0 }} / 300</small>
         </div>
@@ -390,8 +386,7 @@
           <textarea 
             id="motivoReasig" 
             rows="3" 
-            formControlName="motivoReasignacion" 
-            maxlength="300" 
+            formControlName="motivoReasignacion"  
             placeholder="Indique el justificativo de la transferencia (mínimo 10 caracteres)...">
           </textarea>
           <small class="char-count">{{ reasignarForm.get('motivoReasignacion')?.value?.length || 0 }} / 300 (mín. 10)</small>
@@ -476,19 +471,19 @@
       <form class="bitacora-filtros" (ngSubmit)="buscarBitacora()">
         <div>
           <label for="bitDesde">Fecha inicial:</label>
-          <input type="text" id="bitDesde" name="bitDesde" maxlength="10" placeholder="DD/MM/AAAA" inputmode="numeric" [ngModel]="bitFechaDesde" (ngModelChange)="bitFechaDesde = mascaraFecha($event)" />
+          <input type="text" id="bitDesde" name="bitDesde"  placeholder="DD/MM/AAAA" inputmode="numeric" [(ngModel)]="bitFechaDesde" />
         </div>
         <div>
           <label for="bitHasta">Fecha final:</label>
-          <input type="text" id="bitHasta" name="bitHasta" maxlength="10" placeholder="DD/MM/AAAA" inputmode="numeric" [ngModel]="bitFechaHasta" (ngModelChange)="bitFechaHasta = mascaraFecha($event)" />
+          <input type="text" id="bitHasta" name="bitHasta"  placeholder="DD/MM/AAAA" inputmode="numeric" [(ngModel)]="bitFechaHasta" />
         </div>
         <div>
           <label for="bitAccion">Operación:</label>
-          <input type="text" id="bitAccion" name="bitAccion" maxlength="50" placeholder="Ej. Cancelación" [(ngModel)]="bitAccion" />
+          <input type="text" id="bitAccion" name="bitAccion"  placeholder="Ej. Cancelación" [(ngModel)]="bitAccion" />
         </div>
         <div>
           <label for="bitModulo">Módulo:</label>
-          <input type="text" id="bitModulo" name="bitModulo" maxlength="40" placeholder="Ej. Gestión de casos" [(ngModel)]="bitModulo" />
+          <input type="text" id="bitModulo" name="bitModulo"  placeholder="Ej. Gestión de casos" [(ngModel)]="bitModulo" />
         </div>
         <div>
           <label for="bitActor">Tipo de actor:</label>

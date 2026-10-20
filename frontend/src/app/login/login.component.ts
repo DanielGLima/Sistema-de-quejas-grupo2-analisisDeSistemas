@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
@@ -18,9 +18,6 @@ export class LoginComponent implements OnInit {
   servicioFueraDeLinea: boolean = false;
   cargando: boolean = false;
 
-  // Regex para formato de correo estándar: usuario@dominio.extension
-  private readonly PATRON_CORREO = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-
   constructor(
     private fb: FormBuilder,
     private router: Router,
@@ -33,15 +30,8 @@ export class LoginComponent implements OnInit {
     }
 
     this.loginForm = this.fb.group({
-      correoElectronico: ['', [
-        Validators.required,
-        Validators.maxLength(100),
-        Validators.pattern(this.PATRON_CORREO)
-      ]],
-      password: ['', [
-        Validators.required,
-        Validators.maxLength(20)
-      ]]
+      correoElectronico: [''],
+      password: ['']
     });
   }
 
@@ -50,25 +40,8 @@ export class LoginComponent implements OnInit {
     this.mensajeError = '';
     this.servicioFueraDeLinea = false;
 
-    const correoControl = this.loginForm.get('correoElectronico');
-    const passControl = this.loginForm.get('password');
-
-    const correo = correoControl?.value?.trim() || '';
-    const pass = passControl?.value || '';
-
-    // FA04: Campos obligatorios vacíos
-    if (!correo || !pass) {
-      this.loginForm.markAllAsTouched();
-      this.mensajeError = 'Debe ingresar los campos obligatorios';
-      return;
-    }
-
-    // Validación de formato de correo
-    if (!this.PATRON_CORREO.test(correo)) {
-      correoControl?.setErrors({ pattern: true });
-      this.mensajeError = 'El formato del correo electrónico es inválido';
-      return;
-    }
+    const correo = this.loginForm.get('correoElectronico')?.value?.trim() || '';
+    const pass = this.loginForm.get('password')?.value || '';
 
     this.cargando = true;
 

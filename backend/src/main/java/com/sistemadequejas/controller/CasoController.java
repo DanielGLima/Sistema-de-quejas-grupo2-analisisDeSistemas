@@ -96,10 +96,10 @@ public class CasoController {
     // CU-05: registra un nuevo caso. Las evidencias son obligatorias (al menos un archivo).
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Caso> crear(
-            @RequestParam Integer idTipoCaso,
-            @RequestParam Integer idSucursal,
-            @RequestParam Integer idCategoria,
-            @RequestParam String descripcion,
+            @RequestParam(required = false) Integer idTipoCaso,
+            @RequestParam(required = false) Integer idSucursal,
+            @RequestParam(required = false) Integer idCategoria,
+            @RequestParam(required = false) String descripcion,
             @RequestParam(required = false) String numeroFactura,
             @RequestParam(required = false) String nombreEmpleadoInvolucrado,
             @RequestParam(defaultValue = "false") boolean esAnonimo,
@@ -112,7 +112,8 @@ public class CasoController {
         if (archivos == null) {
             archivos = List.of();
         }
-        if (descripcion == null || descripcion.trim().length() < 10 || descripcion.length() > 1000) {
+        if (idTipoCaso == null || idSucursal == null || idCategoria == null
+                || descripcion == null || descripcion.trim().length() < 10 || descripcion.length() > 1000) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe ingresar los campos obligatorios");
         }
 

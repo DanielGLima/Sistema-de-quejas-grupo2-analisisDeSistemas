@@ -94,8 +94,8 @@ public class UsuarioService {
         usuarioRepository.deleteById(id);
     }
 
-    // CU-01: crea la cuenta cifrando la contrasena antes de guardar.
-    public Usuario registrar(Usuario usuario, String passwordPlano) {
+    // CU-01 paso 4: datos personales completos y correo no registrado.
+    public void validarDatosRegistro(Usuario usuario) {
         // FA01: campos obligatorios incompletos o invalidos
         if (primerCampoInvalido(usuario) != null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -105,8 +105,21 @@ public class UsuarioService {
         if (usuarioRepository.existsByCorreo(usuario.getCorreo())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El correo electrónico ya se encuentra registrado");
         }
-        // FA02: formato de la contrasena
-        validarFormatoPassword(passwordPlano, MSG_FORMATO_PASSWORD_CU01);
+    }
+
+    // Valida una contrasena nueva: longitud, formato y, si se envia, que coincida con su confirmacion.
+    public void validarPasswordNueva(String password, String confirmacion, String mensajeFormato) {
+        validarFormatoPassword(password, mensajeFormato);
+        if (confirmacion != null && !confirmacion.equals(password)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Las contraseñas ingresadas no coinciden");
+        }
+    }
+
+    // CU-01: crea la cuenta cifrando la contrasena antes de guardar.
+    public Usuario registrar(Usuario usuario, String passwordPlano, String confirmacionPassword) {
+        validarDatosRegistro(usuario);
+        // FA03 a FA05: longitud, formato y confirmacion de la contrasena
+        validarPasswordNueva(passwordPlano, confirmacionPassword, MSG_FORMATO_PASSWORD_CU01);
         usuario.setContrasenaHash(passwordEncoder.encode(passwordPlano));
         return usuarioRepository.save(usuario);
     }

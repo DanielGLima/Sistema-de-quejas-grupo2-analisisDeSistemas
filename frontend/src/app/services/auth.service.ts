@@ -6,18 +6,19 @@ import { Usuario } from '../core/models/usuario';
 
 export interface RegistroRequest {
   nombreCompleto: string;
-  fechaNacimiento: string;
+  fechaNacimiento: string | null;
   nacionalidad: string;
   correo: string;
   codigoArea: string;
   telefono: string;
   direccion: string;
   password: string;
+  confirmacionPassword?: string;
 }
 
 export interface ActualizarPerfilRequest {
   nombreCompleto: string;
-  fechaNacimiento: string;
+  fechaNacimiento: string | null;
   nacionalidad: string;
   correo: string;
   codigoArea: string;
@@ -54,6 +55,16 @@ export class AuthService {
   // CU-01
   registrar(datos: RegistroRequest): Observable<Usuario> {
     return this.http.post<Usuario>(`${API_BASE_URL}/auth/registro`, datos, { withCredentials: true });
+  }
+
+  // CU-01 paso 4: el backend valida los datos personales y que el correo no esté registrado (FA01, FA01.1)
+  validarDatosRegistro(datos: RegistroRequest): Observable<void> {
+    return this.http.post<void>(`${API_BASE_URL}/auth/registro/validar-datos`, datos, { withCredentials: true });
+  }
+
+  // CU-01 paso 6: el backend valida la contraseña y su confirmación (FA03, FA04, FA05)
+  validarPasswordRegistro(datos: RegistroRequest): Observable<void> {
+    return this.http.post<void>(`${API_BASE_URL}/auth/registro/validar-password`, datos, { withCredentials: true });
   }
 
   // CU-01, FA01.1
@@ -129,10 +140,10 @@ export class AuthService {
   }
 
   // CU-02 paso 2
-  recuperarConfirmar(correo: string, codigo: string, passwordNueva: string): Observable<void> {
+  recuperarConfirmar(correo: string, codigo: string, passwordNueva: string, confirmacionPassword: string): Observable<void> {
     return this.http.post<void>(
       `${API_BASE_URL}/auth/recuperar/confirmar`,
-      { correo, codigo, passwordNueva },
+      { correo, codigo, passwordNueva, confirmacionPassword },
       { withCredentials: true }
     );
   }

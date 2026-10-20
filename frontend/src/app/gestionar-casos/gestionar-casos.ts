@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { Router } from '@angular/router';
 import { NavbarComponent } from '../shared/navbar/navbar';
 import { AdminService } from '../services/admin.service';
@@ -129,19 +129,19 @@ export class GestionarCasosComponent implements OnInit {
   ngOnInit(): void {
     this.gestionForm = this.fb.group({
       empleadoAsignado: [null as number | null],
-      nuevoEstado: ['', Validators.required],
-      notasInternas: ['', [Validators.maxLength(500)]]
+      nuevoEstado: [''],
+      notasInternas: ['']
     });
 
     this.respuestaForm = this.fb.group({
-      titulo: ['', [Validators.required, Validators.maxLength(100)]],
-      cuerpo: ['', [Validators.required, Validators.minLength(20), Validators.maxLength(1000)]],
-      compensacion: ['', [Validators.maxLength(300)]]
+      titulo: [''],
+      cuerpo: [''],
+      compensacion: ['']
     });
 
     this.reasignarForm = this.fb.group({
-      nuevoResponsable: [null as number | null, Validators.required],
-      motivoReasignacion: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(300)]]
+      nuevoResponsable: [null as number | null],
+      motivoReasignacion: ['']
     });
 
     this.adminService.sesion().subscribe({
@@ -177,37 +177,10 @@ export class GestionarCasosComponent implements OnInit {
     this.adminService.empleadosAsignables().subscribe(e => this.empleados = e);
   }
 
-  // Inserta las diagonales mientras se escribe DD/MM/AAAA (solo dígitos, máximo 8).
-  mascaraFecha(valor: string): string {
-    const digitos = (valor ?? '').replace(/\D/g, '').slice(0, 8);
-    if (digitos.length > 4) return `${digitos.slice(0, 2)}/${digitos.slice(2, 4)}/${digitos.slice(4)}`;
-    if (digitos.length > 2) return `${digitos.slice(0, 2)}/${digitos.slice(2)}`;
-    return digitos;
-  }
-
-  // Valida que el texto sea una fecha real DD/MM/AAAA; devuelve false si es inválida.
-  private fechaValida(texto: string): boolean {
-    if (!texto) return true;
-    const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(texto);
-    if (!m) return false;
-    const d = Number(m[1]), mes = Number(m[2]), a = Number(m[3]);
-    const f = new Date(a, mes - 1, d);
-    return f.getFullYear() === a && f.getMonth() === mes - 1 && f.getDate() === d;
-  }
-
   // --- CU-12: búsqueda en el servidor ---
   buscar(alTerminar?: () => void): void {
     this.mensajeErrorBusqueda = '';
 
-    // FA02: criterios inválidos, indicando cómo corregirlos
-    if (!this.fechaValida(this.filtroFechaDesde)) {
-      this.mensajeErrorBusqueda = 'La fecha inicial es inválida. Use el formato DD/MM/AAAA';
-      return;
-    }
-    if (!this.fechaValida(this.filtroFechaHasta)) {
-      this.mensajeErrorBusqueda = 'La fecha final es inválida. Use el formato DD/MM/AAAA';
-      return;
-    }
     this.buscando = true;
 
     this.adminService.buscarCasos({
@@ -333,10 +306,7 @@ export class GestionarCasosComponent implements OnInit {
 
   guardarGestion(): void {
     this.mensajeError = '';
-    if (!this.casoSeleccionado || this.gestionForm.invalid) {
-      this.mensajeError = 'Debe seleccionar un estado válido.';
-      return;
-    }
+    if (!this.casoSeleccionado) return;
 
     const { empleadoAsignado, nuevoEstado, notasInternas } = this.gestionForm.value;
 
@@ -410,17 +380,11 @@ export class GestionarCasosComponent implements OnInit {
   enviarRespuesta(): void {
     this.mensajeErrorRespuesta = '';
     if (!this.casoSeleccionado) return;
-    if (this.respuestaForm.invalid) {
-      this.respuestaForm.markAllAsTouched();
-      this.mensajeErrorRespuesta = 'Debe completar la información requerida: título (máx. 100) y cuerpo de la respuesta (entre 20 y 1000 caracteres).';
-      return;
-    }
-
     const { titulo, cuerpo, compensacion } = this.respuestaForm.value;
 
     this.adminService.responder(this.casoSeleccionado.idCaso, {
-      titulo: titulo.trim(),
-      cuerpo: cuerpo.trim(),
+      titulo: (titulo ?? '').trim(),
+      cuerpo: (cuerpo ?? '').trim(),
       accionesSeguimiento: compensacion?.trim() || undefined
     }).subscribe({
       next: (api) => {
@@ -468,17 +432,9 @@ export class GestionarCasosComponent implements OnInit {
 
     const resp = this.reasignarForm.get('nuevoResponsable')?.value;
     const motivo = (this.reasignarForm.get('motivoReasignacion')?.value ?? '').trim();
-    if (!resp) {
-      this.mensajeErrorReasignar = 'Debe seleccionar un nuevo empleado responsable.';
-      return;
-    }
-    if (motivo.length < 10) {
-      this.mensajeErrorReasignar = 'Debe ingresar el motivo de la reasignación (mínimo 10 caracteres).';
-      return;
-    }
 
     this.adminService.reasignar(this.casoSeleccionado.idCaso, {
-      idPersonalNuevo: Number(resp),
+      idPersonalNuevo: resp ? Number(resp) : null,
       motivo,
       fechaActualizacion: this.casoSeleccionado.fechaActualizacion
     }).subscribe({
@@ -519,16 +475,6 @@ export class GestionarCasosComponent implements OnInit {
   private refrescarBitacora(): void {
     if (!this.esAdminRol()) return;
     this.mensajeErrorBitacora = '';
-
-    // Criterios inválidos: se indica cómo corregirlos.
-    if (!this.fechaValida(this.bitFechaDesde)) {
-      this.mensajeErrorBitacora = 'La fecha inicial es inválida. Use el formato DD/MM/AAAA';
-      return;
-    }
-    if (!this.fechaValida(this.bitFechaHasta)) {
-      this.mensajeErrorBitacora = 'La fecha final es inválida. Use el formato DD/MM/AAAA';
-      return;
-    }
 
     this.adminService.bitacora({
       fechaInicial: this.bitFechaDesde,

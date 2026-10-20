@@ -1,16 +1,11 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { Router } from '@angular/router';
 import { NavbarComponent } from '../shared/navbar/navbar';
 import { CasoService } from '../services/caso.service';
 import { CatalogoService } from '../services/catalogo.service';
 import { TipoCaso, CategoriaCaso, Sucursal } from '../core/models/catalogos';
-
-const TAMANO_MAXIMO_BYTES = 2 * 1024 * 1024; // 2 MB (FA03)
-const TIPOS_PERMITIDOS = ['image/jpeg', 'image/png', 'application/pdf'];
-const PATRON_FACTURA = /^[A-Za-z0-9]{1,20}$/; // Alfanumérico sin símbolos (FA02)
-const PATRON_EMPLEADO = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]{1,100}$/; // Solo letras (FA05)
 
 @Component({
   selector: 'app-registrar-caso',
@@ -44,15 +39,15 @@ export class RegistrarCasoComponent implements OnInit {
     this.cargarCatalogos();
   }
 
-  // Paso 2: Solicitud de campos y definición de validaciones reactivas
+  // Paso 2: Solicitud de campos (todas las validaciones las realiza el backend)
   inicializarFormulario(): void {
     this.casoForm = this.fb.group({
-      idTipoCaso: ['', Validators.required],
-      idSucursal: ['', Validators.required],
-      idCategoria: ['', Validators.required],
-      descripcion: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(1000)]],
-      numeroFactura: ['', [Validators.maxLength(20), Validators.pattern(PATRON_FACTURA)]],
-      nombreEmpleadoInvolucrado: ['', [Validators.maxLength(100), Validators.pattern(PATRON_EMPLEADO)]],
+      idTipoCaso: [''],
+      idSucursal: [''],
+      idCategoria: [''],
+      descripcion: [''],
+      numeroFactura: [''],
+      nombreEmpleadoInvolucrado: [''],
       esAnonimo: [false]
     });
 
@@ -70,7 +65,7 @@ export class RegistrarCasoComponent implements OnInit {
     this.catalogoService.sucursales().subscribe(sucursales => this.sucursales = sucursales);
   }
 
-  // FA03: Validación de archivos adjuntos (máximo 2 MB por archivo, formatos JPG, PNG o PDF)
+  // FA03: el backend valida el tamaño (máximo 2 MB) y el formato (JPG, PNG o PDF) de los archivos
   alSeleccionarArchivos(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (!input.files || input.files.length === 0) {
@@ -79,33 +74,13 @@ export class RegistrarCasoComponent implements OnInit {
     }
 
     this.mensajeError = '';
-    const archivos = Array.from(input.files);
-
-    const archivoInvalido = archivos.some(a => {
-      const extValida = /\.(jpg|jpeg|png|pdf)$/i.test(a.name);
-      return a.size > TAMANO_MAXIMO_BYTES || (!TIPOS_PERMITIDOS.includes(a.type) && !extValida);
-    });
-
-    if (archivoInvalido) {
-      this.mensajeError = 'El archivo adjunto supera los 2 MB o no corresponde a un formato permitido (PDF/Imagen)';
-      input.value = '';
-      this.archivosSeleccionados = [];
-      return;
-    }
-
-    this.archivosSeleccionados = archivos;
+    this.archivosSeleccionados = Array.from(input.files);
   }
 
   // FA04: Disponibilidad exclusiva para tipo Denuncia
   get esDenuncia(): boolean {
     const tipo = this.tiposCaso.find(t => String(t.idTipoCaso) === String(this.casoForm.get('idTipoCaso')?.value));
     return tipo?.nombre?.trim().toLowerCase() === 'denuncia';
-  }
-
-  soloTexto(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const limpio = input.value.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]/g, '');
-    this.casoForm.get('nombreEmpleadoInvolucrado')?.setValue(limpio);
   }
 
   // Paso 3: El usuario completa los campos y presiona el botón "Registrar caso"
@@ -116,33 +91,13 @@ export class RegistrarCasoComponent implements OnInit {
 
     const { idTipoCaso, idSucursal, idCategoria, descripcion, numeroFactura, nombreEmpleadoInvolucrado, esAnonimo } = this.casoForm.value;
 
-    // Paso 4: Validación de campos obligatorios (la evidencia adjunta es opcional)
-    // FA01: Campos obligatorios incompletos o vacíos
-    if (!idTipoCaso || !idSucursal || !idCategoria || !descripcion || descripcion.trim().length < 10) {
-      this.casoForm.markAllAsTouched();
-      this.mensajeError = 'Debe ingresar los campos obligatorios';
-      return;
-    }
-
-    // FA02: Formato del número de factura no válido
-    if (numeroFactura && !PATRON_FACTURA.test(numeroFactura.trim())) {
-      this.mensajeError = 'El formato de la factura es inválido';
-      return;
-    }
-
-    // FA05: Formato del nombre del empleado involucrado no válido
-    if (nombreEmpleadoInvolucrado && !PATRON_EMPLEADO.test(nombreEmpleadoInvolucrado.trim())) {
-      this.mensajeError = 'El nombre del empleado involucrado solo puede contener letras (máximo 100 caracteres)';
-      return;
-    }
-
     this.registrando = true;
     // Paso 5 a 7: Creación en el sistema, generación de código único y asignación de estado "Nuevo"
     this.casoService.crear({
       idTipoCaso,
       idSucursal,
       idCategoria,
-      descripcion: descripcion.trim(),
+      descripcion: (descripcion ?? '').trim(),
       numeroFactura: numeroFactura ? numeroFactura.trim() : undefined,
       nombreEmpleadoInvolucrado: nombreEmpleadoInvolucrado ? nombreEmpleadoInvolucrado.trim() : undefined,
       esAnonimo: this.esDenuncia && !!esAnonimo,

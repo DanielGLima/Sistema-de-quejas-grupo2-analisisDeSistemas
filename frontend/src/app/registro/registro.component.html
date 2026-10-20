@@ -27,10 +27,8 @@
         <input
           id="nombreCompleto"
           type="text"
-          maxlength="100"
           placeholder="Ingrese su nombre completo"
-          formControlName="nombreCompleto"
-          (input)="soloTexto($event)"
+          formControlName="nombreCompleto"
         />
       </div>
 
@@ -40,10 +38,8 @@
           <input
             id="fechaNacimiento"
             type="text"
-            maxlength="10"
             placeholder="DD/MM/AAAA"
-            formControlName="fechaNacimiento"
-            (input)="formatearFecha($event)"
+            formControlName="fechaNacimiento"
           />
         </div>
 
@@ -60,8 +56,7 @@
         <label for="correoElectronico">correo electrónico</label>
         <input 
           id="correoElectronico" 
-          type="email" 
-          maxlength="100" 
+          type="email" 
           placeholder="ejemplo@correo.com"
           formControlName="correoElectronico" 
         />
@@ -74,10 +69,8 @@
             id="codigoArea"
             type="text"
             inputmode="numeric"
-            maxlength="4"
             placeholder="ej. 502"
-            formControlName="codigoArea"
-            (input)="soloNumeros($event, 'codigoArea')"
+            formControlName="codigoArea"
           />
         </div>
 
@@ -87,10 +80,8 @@
             id="telefono"
             type="text"
             inputmode="numeric"
-            maxlength="8"
             placeholder="12345678"
-            formControlName="telefono"
-            (input)="soloNumeros($event, 'telefono')"
+            formControlName="telefono"
           />
         </div>
       </div>
@@ -99,8 +90,7 @@
         <label for="direccion">dirección residencial</label>
         <input 
           id="direccion" 
-          type="text" 
-          maxlength="150" 
+          type="text" 
           placeholder="Ingrese su dirección residencial"
           formControlName="direccion" 
         />
@@ -127,8 +117,7 @@
           <label for="password">contraseña</label>
           <input 
             id="password" 
-            type="password" 
-            maxlength="20" 
+            type="password" 
             placeholder="Mínimo 6 y máximo 20 caracteres"
             formControlName="password" 
           />
@@ -138,8 +127,7 @@
           <label for="confirmarPassword">confirmar contraseña</label>
           <input 
             id="confirmarPassword" 
-            type="password" 
-            maxlength="20" 
+            type="password" 
             placeholder="Repita su contraseña"
             formControlName="confirmarPassword" 
           />

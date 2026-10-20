@@ -311,7 +311,6 @@
             id="comentariosEval"
             rows="4"
             formControlName="comentarios"
-            maxlength="500"
             placeholder="Escriba aquí sus comentarios sobre el servicio recibido...">
           </textarea>
           <div class="char-counter">
@@ -353,14 +352,13 @@
         <span>{{ mensajeExitoReapertura }}</span>
       </div>
 
-      <form [formGroup]="reaperturaForm" (ngSubmit)="enviarSolicitudReapertura()" *ngIf="!estaPlazoReaperturaVencido(casoSeleccionado)">
+      <form [formGroup]="reaperturaForm" (ngSubmit)="enviarSolicitudReapertura()">
         <div class="form-group-eval">
           <label for="motivoReapertura">Motivo detallado de reapertura (*):</label>
           <textarea 
             id="motivoReapertura"
             rows="4"
             formControlName="motivo"
-            maxlength="500"
             placeholder="Explique detalladamente por qué considera que la solución no resolvió satisfactoriamente el caso (mínimo 10 caracteres)...">
           </textarea>
           <div class="char-counter">
@@ -373,7 +371,6 @@
           <input 
             type="file" 
             id="evidenciaReapertura" 
-            accept=".jpg,.jpeg,.png,.pdf"
             (change)="onArchivoReaperturaSeleccionado($event)" />
           <small class="file-selected" *ngIf="archivoReaperturaNombre">
             Archivo seleccionado: {{ archivoReaperturaNombre }}
@@ -390,11 +387,6 @@
         </div>
       </form>
 
-      <div *ngIf="estaPlazoReaperturaVencido(casoSeleccionado)" class="modal-footer modal-footer-eval">
-        <button type="button" class="btn btn-secondary" (click)="cerrarModalReapertura()">
-          Entendido
-        </button>
-      </div>
     </div>
   </div>
 </div>

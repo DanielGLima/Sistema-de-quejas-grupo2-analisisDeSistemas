@@ -24,19 +24,19 @@
         <h3>{{ idEdicionPersonal === null ? 'Nuevo usuario interno' : 'Editar usuario interno' }}</h3>
 
         <label>Nombre completo (solo letras, máx. 100)
-          <input name="nombre" [(ngModel)]="formPersonal.nombreCompleto" maxlength="100" required />
+          <input name="nombre" [(ngModel)]="formPersonal.nombreCompleto" />
         </label>
         <label>Correo electrónico corporativo (máx. 100)
-          <input name="correo" type="email" [(ngModel)]="formPersonal.correo" maxlength="100" required />
+          <input name="correo" type="email" [(ngModel)]="formPersonal.correo" />
         </label>
         <label>Rol asignado
-          <select name="rol" [(ngModel)]="formPersonal.idRol" required>
+          <select name="rol" [(ngModel)]="formPersonal.idRol">
             <option [ngValue]="null" disabled>Seleccione un rol</option>
             <option *ngFor="let r of roles" [ngValue]="r.idRol">{{ r.nombre }}</option>
           </select>
         </label>
         <label>Sucursal asignada
-          <select name="sucursal" [(ngModel)]="formPersonal.idSucursal" required>
+          <select name="sucursal" [(ngModel)]="formPersonal.idSucursal">
             <option [ngValue]="null" disabled>Seleccione una sucursal</option>
             <option *ngFor="let s of sucursales" [ngValue]="s.idSucursal">{{ s.nombreSucursal }}</option>
           </select>
@@ -48,7 +48,7 @@
           </select>
         </label>
         <label>Contraseña temporal (alfanumérica, 6 a 20){{ idEdicionPersonal !== null ? ' — dejar vacío para no cambiarla' : '' }}
-          <input name="password" type="password" [(ngModel)]="formPersonal.passwordTemporal" maxlength="20" [required]="idEdicionPersonal === null" />
+          <input name="password" type="password" [(ngModel)]="formPersonal.passwordTemporal" />
         </label>
 
         <div class="form-actions">
@@ -80,13 +80,13 @@
       <form class="form-grid" (ngSubmit)="guardarSucursal()">
         <h3>{{ idEdicionCatalogo === null ? 'Nueva sucursal' : 'Editar sucursal' }}</h3>
         <label>Nombre de la sucursal (máx. 30)
-          <input name="suc-nombre" [(ngModel)]="formSucursal.nombre" maxlength="30" required />
+          <input name="suc-nombre" [(ngModel)]="formSucursal.nombre" />
         </label>
         <label>Dirección de la sucursal (máx. 150)
-          <input name="suc-dir" [(ngModel)]="formSucursal.direccion" maxlength="150" required />
+          <input name="suc-dir" [(ngModel)]="formSucursal.direccion" />
         </label>
         <label>Teléfono (opcional)
-          <input name="suc-tel" [(ngModel)]="formSucursal.telefono" maxlength="20" />
+          <input name="suc-tel" [(ngModel)]="formSucursal.telefono" />
         </label>
         <div class="form-actions">
           <button type="button" class="btn secondary" *ngIf="idEdicionCatalogo !== null" (click)="cancelarEdicion()">Cancelar</button>
@@ -116,10 +116,10 @@
       <form class="form-grid" (ngSubmit)="guardarTipo()">
         <h3>{{ idEdicionCatalogo === null ? 'Nuevo tipo de caso' : 'Editar tipo de caso' }}</h3>
         <label>Nombre del tipo de caso (máx. 20)
-          <input name="tipo-nombre" [(ngModel)]="formTipo.nombre" maxlength="20" required />
+          <input name="tipo-nombre" [(ngModel)]="formTipo.nombre" />
         </label>
         <label>Prefijo (3 letras)
-          <input name="tipo-codigo" [(ngModel)]="formTipo.codigo" maxlength="3" required />
+          <input name="tipo-codigo" [(ngModel)]="formTipo.codigo" />
         </label>
         <div class="form-actions">
           <button type="button" class="btn secondary" *ngIf="idEdicionCatalogo !== null" (click)="cancelarEdicion()">Cancelar</button>
@@ -148,10 +148,10 @@
       <form class="form-grid" (ngSubmit)="guardarCategoria()">
         <h3>{{ idEdicionCatalogo === null ? 'Nueva categoría' : 'Editar categoría' }}</h3>
         <label>Nombre de la categoría (solo letras, máx. 30)
-          <input name="cat-nombre" [(ngModel)]="formCategoria.nombre" maxlength="30" required />
+          <input name="cat-nombre" [(ngModel)]="formCategoria.nombre" />
         </label>
         <label>Prefijo (3 letras)
-          <input name="cat-codigo" [(ngModel)]="formCategoria.codigo" maxlength="3" required />
+          <input name="cat-codigo" [(ngModel)]="formCategoria.codigo" />
         </label>
         <div class="form-actions">
           <button type="button" class="btn secondary" *ngIf="idEdicionCatalogo !== null" (click)="cancelarEdicion()">Cancelar</button>

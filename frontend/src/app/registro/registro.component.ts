@@ -1,17 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { AuthService } from '../services/auth.service';
+import { AuthService, RegistroRequest } from '../services/auth.service';
 import { NACIONALIDADES } from '../core/nacionalidades';
 
-// Formato de email estándar
-const PATRON_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-// Solo texto alfabético y espacios
-const PATRON_SOLO_LETRAS = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]+$/;
-// Al menos una mayúscula, un carácter especial y un número (FA04)
-const PATRON_PASSWORD = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$\%^&*(),.?":{}\vert{}<>_\-]).+$/;
-
+// Este componente solo captura los datos: todas las validaciones (campos obligatorios, formatos,
+// correo ya registrado y contraseña) las realiza el backend y aquí solo se muestra su mensaje.
 @Component({
   selector: 'app-registro',
   standalone: true,
@@ -44,152 +39,72 @@ export class RegistroComponent implements OnInit {
 
   inicializarFormulario(): void {
     this.registroForm = this.fb.group({
-      nombreCompleto: ['', [Validators.required, Validators.maxLength(100), Validators.pattern(PATRON_SOLO_LETRAS)]],
-      fechaNacimiento: ['', [Validators.required, this.validarFechaDDMMAAAA]],
-      nacionalidad: ['', [Validators.required, Validators.maxLength(50)]],
-      correoElectronico: ['', [Validators.required, Validators.maxLength(100), Validators.pattern(PATRON_CORREO)]],
-      codigoArea: ['', [Validators.required, Validators.pattern(/^[0-9]{1,4}$/)]],
-      telefono: ['', [Validators.required, Validators.pattern(/^[0-9]{8}$/)]],
-      direccion: ['', [Validators.required, Validators.maxLength(150)]],
-      password: ['', [Validators.required, Validators.minLength(6), Validators.maxLength(20), Validators.pattern(PATRON_PASSWORD)]],
-      confirmarPassword: ['', Validators.required]
-    }, { validators: this.validarPasswordsIguales });
+      nombreCompleto: [''],
+      fechaNacimiento: [''],
+      nacionalidad: [''],
+      correoElectronico: [''],
+      codigoArea: [''],
+      telefono: [''],
+      direccion: [''],
+      password: [''],
+      confirmarPassword: ['']
+    });
   }
 
-  validarFechaDDMMAAAA(control: AbstractControl): ValidationErrors | null {
-    const valor = control.value;
-    if (!valor) return null;
-
-    const coincide = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(valor);
-    if (!coincide) return { formatoInvalido: true };
-
-    const [, diaStr, mesStr, anioStr] = coincide;
-    const dia = Number(diaStr);
-    const mes = Number(mesStr);
-    const anio = Number(anioStr);
-    const fecha = new Date(anio, mes - 1, dia);
-
-    const esFechaReal = fecha.getFullYear() === anio && fecha.getMonth() === mes - 1 && fecha.getDate() === dia;
-    if (!esFechaReal) return { formatoInvalido: true };
-
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    if (fecha > hoy) return { fechaFutura: true };
-
-    return null;
-  }
-
-  formatearFecha(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    let soloDigitos = input.value.replace(/\D/g, '').slice(0, 8);
-
-    let formateado = soloDigitos;
-    if (soloDigitos.length > 4) {
-      formateado = `${soloDigitos.slice(0, 2)}/${soloDigitos.slice(2, 4)}/${soloDigitos.slice(4)}`;
-    } else if (soloDigitos.length > 2) {
-      formateado = `${soloDigitos.slice(0, 2)}/${soloDigitos.slice(2)}`;
-    }
-
-    this.registroForm.get('fechaNacimiento')?.setValue(formateado);
-  }
-
-  private convertirFechaAISO(fechaDDMMAAAA: string): string {
-    const [dia, mes, anio] = fechaDDMMAAAA.split('/');
+  // Convierte DD/MM/AAAA al formato que recibe el backend; si no tiene tres partes se envía vacía.
+  private convertirFechaAISO(fechaDDMMAAAA: string | null): string | null {
+    const partes = (fechaDDMMAAAA ?? '').trim().split('/');
+    if (partes.length !== 3) return null;
+    const [dia, mes, anio] = partes;
     return `${anio}-${mes}-${dia}`;
   }
 
-  soloNumeros(event: Event, controlName: string): void {
-    const input = event.target as HTMLInputElement;
-    const limpio = input.value.replace(/\D/g, '');
-    this.registroForm.get(controlName)?.setValue(limpio);
+  private datosRegistro(): RegistroRequest {
+    const v = this.registroForm.value;
+    return {
+      nombreCompleto: (v.nombreCompleto ?? '').trim(),
+      fechaNacimiento: this.convertirFechaAISO(v.fechaNacimiento),
+      nacionalidad: v.nacionalidad,
+      correo: (v.correoElectronico ?? '').trim(),
+      codigoArea: String(v.codigoArea ?? '').trim(),
+      telefono: String(v.telefono ?? '').trim(),
+      direccion: (v.direccion ?? '').trim(),
+      password: v.password ?? '',
+      confirmacionPassword: v.confirmarPassword ?? ''
+    };
   }
 
-  soloTexto(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const limpio = input.value.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]/g, '');
-    this.registroForm.get('nombreCompleto')?.setValue(limpio);
-  }
-
-  validarPasswordsIguales(control: AbstractControl): ValidationErrors | null {
-    const pass = control.get('password')?.value;
-    const confirm = control.get('confirmarPassword')?.value;
-    return pass === confirm ? null : { noCoincide: true };
-  }
-
-  // Paso 4: Validar datos personales del Paso 1 antes de mostrar campos de contraseña
+  // Paso 4: el backend valida los datos personales (FA01) y que el correo no esté registrado (FA01.1)
   habilitarPassword(): void {
     this.limpiarMensajes();
-
-    const camposPaso1 = ['nombreCompleto', 'fechaNacimiento', 'nacionalidad', 'correoElectronico', 'codigoArea', 'telefono', 'direccion'];
-    let formInvalido = false;
-
-    camposPaso1.forEach(campo => {
-      const control = this.registroForm.get(campo);
-      if (!control || control.invalid) {
-        control?.markAsTouched();
-        formInvalido = true;
-      }
-    });
-
-    // FA01: Campos obligatorios incompletos o inválidos
-    if (formInvalido) {
-      this.mensajeError = 'Debe completar todos los datos personales obligatorios antes de continuar';
-      return;
-    }
-
-    // FA02: Verificar correo ya registrado
     this.verificandoCorreo = true;
-    const correo = this.registroForm.get('correoElectronico')?.value?.trim();
 
-    this.authService.correoDisponible(correo).subscribe({
-      next: ({ disponible }) => {
+    this.authService.validarDatosRegistro(this.datosRegistro()).subscribe({
+      next: () => {
         this.verificandoCorreo = false;
-        if (!disponible) {
-          this.mensajeError = 'El correo electrónico ya se encuentra registrado';
-          return;
-        }
         // Paso 5: Mostrar campos de contraseña
         this.pasoPassword = true;
       },
-      error: () => {
+      error: (err) => {
         this.verificandoCorreo = false;
-        this.mensajeError = 'No se pudo validar el correo electrónico, intente nuevamente';
+        this.mensajeError = err.error?.message || 'No se pudo validar los datos, intente nuevamente';
       }
     });
   }
 
-  // Paso 6: Solicitar confirmación con validación estricta de FA03, FA04 y FA05
+  // Paso 6: el backend valida la contraseña y su confirmación (FA03, FA04 y FA05)
   solicitarConfirmacion(): void {
     this.limpiarMensajes();
 
-    const passControl = this.registroForm.get('password');
-    const confirmControl = this.registroForm.get('confirmarPassword');
-
-    passControl?.markAsTouched();
-    confirmControl?.markAsTouched();
-
-    const passVal = passControl?.value || '';
-
-    // FA03: Longitud fuera de rango (6 a 20)
-    if (passControl?.hasError('required') || passVal.length < 6 || passVal.length > 20) {
-      this.mensajeError = 'La contraseña debe tener entre 6 y 20 caracteres';
-      return;
-    }
-
-    // FA04: Formato de contraseña inválido
-    if (!PATRON_PASSWORD.test(passVal)) {
-      this.mensajeError = 'El formato de la contraseña debe incluir al menos una letra mayúscula, un carácter especial y un número';
-      return;
-    }
-
-    // FA05: Las contraseñas no coinciden
-    if (this.registroForm.hasError('noCoincide')) {
-      this.mensajeError = 'Las contraseñas ingresadas no coinciden';
-      return;
-    }
-
-    // Si todo está correcto, se muestra el modal de confirmación
-    this.mostrarModalConfirmacion = true;
+    this.authService.validarPasswordRegistro(this.datosRegistro()).subscribe({
+      next: () => {
+        // Si todo está correcto, se muestra el modal de confirmación
+        this.mostrarModalConfirmacion = true;
+      },
+      error: (err) => {
+        this.mensajeError = err.error?.message || 'No se pudo validar la contraseña, intente nuevamente';
+      }
+    });
   }
 
   // Paso 7 y 8: Confirmación Sí/No
@@ -203,18 +118,8 @@ export class RegistroComponent implements OnInit {
     }
 
     this.guardando = true;
-    const { nombreCompleto, fechaNacimiento, nacionalidad, correoElectronico, codigoArea, telefono, direccion, password } = this.registroForm.value;
 
-    this.authService.registrar({
-      nombreCompleto: nombreCompleto.trim(),
-      fechaNacimiento: this.convertirFechaAISO(fechaNacimiento),
-      nacionalidad,
-      correo: correoElectronico.trim(),
-      codigoArea: String(codigoArea).trim(),
-      telefono: String(telefono).trim(),
-      direccion: direccion.trim(),
-      password
-    }).subscribe({
+    this.authService.registrar(this.datosRegistro()).subscribe({
       next: () => {
         this.guardando = false;
         // Paso 9 y 10: Mensaje de éxito y redirección automática al inicio de sesión
@@ -225,12 +130,7 @@ export class RegistroComponent implements OnInit {
       },
       error: (err) => {
         this.guardando = false;
-        // FA02 desde backend si existió concurrencia
-        if (err.status === 409) {
-          this.mensajeError = 'El correo electrónico ya se encuentra registrado';
-        } else {
-          this.mensajeError = err.error?.message || 'Debe completar todos los datos personales obligatorios antes de continuar';
-        }
+        this.mensajeError = err.error?.message || 'Debe completar todos los datos personales obligatorios antes de continuar';
       }
     });
   }
