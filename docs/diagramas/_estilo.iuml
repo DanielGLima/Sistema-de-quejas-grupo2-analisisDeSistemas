@@ -1,0 +1,16 @@
+skinparam dpi 150
+skinparam defaultFontName "DejaVu Sans"
+skinparam defaultFontSize 11
+skinparam shadowing false
+skinparam roundCorner 6
+skinparam ArrowColor #37474F
+skinparam ArrowFontSize 10
+skinparam ClassBackgroundColor #FFFFFF
+skinparam ClassBorderColor #455A64
+skinparam ClassHeaderBackgroundColor #E3F2FD
+skinparam PackageBorderColor #90A4AE
+skinparam PackageBackgroundColor #FAFAFA
+skinparam NoteBackgroundColor #FFF8E1
+skinparam NoteBorderColor #FFB300
+skinparam TitleFontSize 16
+skinparam TitleFontStyle bold

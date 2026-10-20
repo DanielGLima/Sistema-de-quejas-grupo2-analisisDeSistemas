@@ -1,0 +1,84 @@
+@startuml 02_diagrama_estados_caso
+!include _estilo.iuml
+title Diagrama de Estados — Ciclo de vida de un Caso (Queja / Reclamo / Denuncia / Sugerencia)
+skinparam StateBackgroundColor #FFFFFF
+skinparam StateBorderColor #455A64
+skinparam nodesep 60
+skinparam ranksep 60
+
+state "Nuevo" as Nuevo #E3F2FD
+Nuevo : entry / generar código TIPO-CAT-id
+Nuevo : entry / notificar cliente y personal (CASO_NUEVO)
+Nuevo : gestionar [mismo estado] / asignar responsable
+
+state "En espera" as Espera #FFF8E1
+Espera : gestionar [mismo estado] / asignar responsable
+
+state "En Proceso" as Proceso #E8F5E9 {
+  state "Sin respuesta pendiente" as SinResp
+  state "Respuesta pendiente\nde aprobación" as Pend #FFF3E0
+  [*] --> SinResp
+  SinResp --> Pend : responder() [actor = Operador\n∧ es el responsable] /\nRespuestaCaso "Pendiente de aprobación"
+}
+Proceso : reasignar(nuevo, motivo 10..300) [tiene responsable]
+
+state "Resuelto" as Resuelto #E0F7FA
+Resuelto : entry / notificar cliente (RESPUESTA_OFICIAL)
+Resuelto : evaluar(1..5) [sin evaluación previa]
+
+state "Cerrado" as Cerrado #ECEFF1
+Cerrado : evaluar(1..5) [sin evaluación previa]
+
+state "Reapertura solicitada" as Reap #FCE4EC
+Reap : entry / guardar ReaperturaCaso (motivo, evidencia)
+Reap : entry / notificar responsable o\nAdmin + Gerentes (REAPERTURA_SOLICITADA)
+
+state "Cancelado por el usuario" as Cancel #FFEBEE
+Cancel : entry / notificar personal (CASO_CANCELADO)
+
+[*] --> Nuevo : Cliente registra caso (CU-02)\n[descripción 10..1000, archivos válidos ≤ 2 MB]
+
+Nuevo --> Espera : gestionar (Admin/Gerente)
+Nuevo --> Proceso : gestionar (Admin/Gerente)
+Nuevo --> Cerrado : gestionar (Admin/Gerente)
+Nuevo --> Cancel : cancelar(motivo ≤ 250) (CU-04)\n[sin responsable asignado]
+
+Espera --> Proceso : gestionar
+Espera --> Cerrado : gestionar
+Espera --> Cancel : cancelar (CU-04)\n[sin responsable asignado]
+
+Proceso --> Espera : gestionar
+Proceso --> Cerrado : gestionar
+Proceso --> Resuelto : gestionar (Admin/Gerente)
+SinResp --> Resuelto : responder() [actor = Admin o Gerente]\n/ respuesta "Aprobada"
+Pend --> Resuelto : aprobarRespuesta() (Admin/Gerente)
+
+Resuelto --> Proceso : gestionar
+Resuelto --> Cerrado : gestionar
+
+Cerrado --> Reap : solicitarReapertura(motivo 10..500) (CU-06)\n[ahora ≤ fecha de cierre + 15 días]
+Reap --> Proceso : gestionar (dictamen: procede)
+Reap --> Cerrado : gestionar (dictamen: no procede)
+
+Cerrado --> [*] : [plazo de reapertura vencido]
+Cancel --> [*]
+
+note right of Proceso
+  Toda transición por "gestionar":
+  • solo Administrador General o Gerente;
+  • el Gerente solo en casos de su sucursal;
+  • valida versión (fechaActualizacion) → FA03;
+  • transición fuera de la tabla → 409
+    "Cambio de estado no permitido. Estados permitidos: …";
+  • guarda HistorialEstadoCaso + Bitácora y
+    notifica al cliente (CAMBIO_ESTADO).
+end note
+
+note bottom of Cancel
+  Estados finales (ESTADOS_FINALES):
+  Cerrado y Cancelado por el usuario.
+  Un caso Cancelado no admite ninguna
+  transición; Cerrado solo puede pasar
+  a "Reapertura solicitada".
+end note
+@enduml

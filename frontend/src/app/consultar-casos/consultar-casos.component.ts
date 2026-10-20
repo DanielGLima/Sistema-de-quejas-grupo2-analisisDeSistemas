@@ -357,10 +357,9 @@ export class ConsultarCasosComponent implements OnInit {
 
   estaPlazoReaperturaVencido(caso: Caso): boolean {
     if (!caso.fechaCierre) return false;
-    const fechaCierre = new Date(caso.fechaCierre);
-    const fechaActual = new Date();
-    const diferenciaDias = Math.floor((fechaActual.getTime() - fechaCierre.getTime()) / (1000 * 60 * 60 * 24));
-    return diferenciaDias > 15;
+    // El plazo vence cuando pasan mas de 15 dias exactos (360 horas) desde la fecha y hora del cierre.
+    const limite = new Date(caso.fechaCierre).getTime() + 15 * 24 * 60 * 60 * 1000;
+    return Date.now() > limite;
   }
 
   abrirModalReapertura(caso: Caso): void {

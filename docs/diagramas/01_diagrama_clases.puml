@@ -1,0 +1,220 @@
+@startuml 01_diagrama_clases
+!include _estilo.iuml
+title Diagrama de Clases — Modelo de dominio\nSistema QRDS "Las Delicias" (paquete com.sistemadequejas.model)
+
+left to right direction
+hide empty methods
+skinparam linetype polyline
+skinparam nodesep 40
+skinparam ranksep 70
+
+  class Rol {
+    - idRol : Integer
+    - nombre : String {50, único}
+    - descripcion : String {200}
+    - activo : Boolean
+  }
+  class Sucursal {
+    - idSucursal : Integer
+    - nombreSucursal : String {50}
+    - direccionSucursal : String {150}
+    - telefonoSucursal : String {20}
+    - activo : boolean
+  }
+  class TipoCaso {
+    - idTipoCaso : Integer
+    - codigo : String {3, único}
+    - nombre : String {20, único}
+    - activo : Boolean
+  }
+  class CategoriaCaso {
+    - idCategoria : Integer
+    - codigo : String {3, único}
+    - nombre : String {30, único}
+    - activo : Boolean
+  }
+  class EstadoCaso {
+    - idEstado : Integer
+    - nombre : String {25, único}
+    - orden : Integer
+    - activo : Boolean
+  }
+
+  class Usuario <<cliente>> {
+    - idUsuario : Integer
+    - nombreCompleto : String {100}
+    - fechaNacimiento : LocalDate
+    - nacionalidad : String {80}
+    - correo : String {100, único}
+    - codigoArea : String {4}
+    - telefono : String {8}
+    - direccion : String {150}
+    - contrasenaHash : String {BCrypt}
+    - fechaRegistro : LocalDateTime
+    - activo : Boolean
+  }
+  class Personal <<personal interno>> {
+    - idPersonal : Integer
+    - nombreCompleto : String {100}
+    - correo : String {100, único}
+    - contrasenaHash : String {BCrypt}
+    - fechaCreacion : LocalDateTime
+    - activo : Boolean
+  }
+  class RecuperacionContrasena {
+    - idRecuperacion : Integer
+    - codigoToken : String {6}
+    - fechaCreacion : LocalDateTime
+    - fechaExpiracion : LocalDateTime {+15 min}
+    - usado : Boolean
+  }
+
+  class Caso {
+    - idCaso : Integer
+    - identificadorVisible : String {20, único}
+    - descripcion : String {10..1000}
+    - numeroFactura : String {20}
+    - nombreEmpleadoInvolucrado : String {100}
+    - esAnonimo : Boolean
+    - fechaCreacion : LocalDateTime
+    - fechaActualizacion : LocalDateTime
+    - /numeroCliente : Integer {transitorio}
+  }
+  class EvidenciaCaso {
+    - idEvidencia : Integer
+    - urlArchivo : String {500}
+    - tipoArchivo : String {jpg|png|pdf}
+    - tamanoBytes : Integer {<= 2 MB}
+    - fechaCarga : LocalDateTime
+  }
+  class HistorialEstadoCaso {
+    - idHistorial : Integer
+    - idPersonal : Integer
+    - observacion : String {500}
+    - fechaCambio : LocalDateTime
+  }
+  class RespuestaCaso {
+    - idRespuesta : Integer
+    - titulo : String {100}
+    - contenido : String {20..1000}
+    - accionesSeguimiento : String {300}
+    - estadoAprobacion : EstadoAprobacion
+    - fechaRespuesta : LocalDateTime
+  }
+  class ReasignacionCaso {
+    - idReasignacion : Integer
+    - motivo : String {10..300}
+    - fechaReasignacion : LocalDateTime
+  }
+  class ReaperturaCaso {
+    - idReapertura : Integer
+    - motivo : String {10..500}
+    - urlEvidencia : String {500}
+    - fechaSolicitud : LocalDateTime
+  }
+  class EvaluacionCaso {
+    - idEvaluacion : Integer
+    - calificacion : Short {1..5}
+    - comentario : String {500}
+    - fechaEvaluacion : LocalDateTime
+  }
+
+  class Notificacion {
+    - idNotificacion : Integer
+    - correoDestino : String {100}
+    - tipoEvento : String {50}
+    - asunto : String {100}
+    - contenido : String {500}
+    - estadoEnvio : EstadoEnvio
+    - reintentos : Integer {0..3}
+    - fechaEnvio : LocalDateTime
+  }
+  class BitacoraAuditoria <<solo inserción>> {
+    - idBitacora : Integer
+    - tipoActor : TipoActor
+    - idPersonal : Integer
+    - accion : String {50}
+    - moduloAfectado : String {40}
+    - ipOrigen : String {45}
+    - detalle : String {JSON anterior/nuevo, 1500}
+    - fechaHora : LocalDateTime
+  }
+  enum EstadoAprobacion {
+    APROBADA = "Aprobada"
+    PENDIENTE_APROBACION = "Pendiente de aprobación"
+  }
+  enum EstadoEnvio {
+    PENDIENTE
+    ENVIADO
+    FALLIDO
+    REVISION_ADMINISTRATIVA
+    SMTP_NO_CONFIGURADO
+    SIN_CONTACTO
+  }
+  enum TipoActor {
+    Usuario
+    Personal
+    Sistema
+  }
+
+' ---------- Relaciones con catálogos ----------
+Rol "1" <-- "0..*" Personal : tiene >
+Sucursal "0..1" <-- "0..*" Personal : labora en >
+Usuario "1" -- "0..*" Caso : registra >
+Caso "0..*" --> "1" Sucursal : ocurre en >
+Caso "0..*" --> "1" TipoCaso : es de tipo >
+Caso "0..*" --> "0..1" CategoriaCaso : clasificado en >
+Caso "0..*" --> "1" EstadoCaso : estado actual >
+Caso "0..*" --> "0..1" Personal : responsable asignado >
+Usuario "1" *-- "0..*" RecuperacionContrasena : solicita >
+
+' ---------- Detalle del caso ----------
+Caso "1" *-- "0..*" EvidenciaCaso : adjunta >
+Caso "1" *-- "0..*" HistorialEstadoCaso : registra cambios >
+HistorialEstadoCaso "0..*" --> "0..1" EstadoCaso : estadoAnterior
+HistorialEstadoCaso "0..*" --> "1" EstadoCaso : estadoNuevo
+Caso "1" *-- "0..*" RespuestaCaso : recibe >
+RespuestaCaso "0..*" --> "1" Personal : redactada por >
+Caso "1" *-- "0..*" ReasignacionCaso : historial de responsables >
+ReasignacionCaso "0..*" --> "0..1" Personal : personalAnterior
+ReasignacionCaso "0..*" --> "1" Personal : personalNuevo
+ReasignacionCaso "0..*" --> "1" Personal : personalEjecutor
+Caso "1" *-- "0..*" ReaperturaCaso : solicitudes >
+Caso "1" -- "0..1" EvaluacionCaso : evaluado con >
+
+' ---------- Procesos automáticos ----------
+Notificacion "0..*" --> "0..1" Caso : sobre >
+Notificacion "0..*" --> "0..1" Usuario : destinatario
+Notificacion "0..*" --> "0..1" Personal : destinatario
+BitacoraAuditoria "0..*" --> "0..1" Usuario : actor
+BitacoraAuditoria "0..*" --> "0..1" Caso : afecta >
+RespuestaCaso ..> EstadoAprobacion
+Notificacion ..> EstadoEnvio
+BitacoraAuditoria ..> TipoActor
+
+note bottom of Caso
+  <b>identificadorVisible</b> = prefijo tipo + "-" + prefijo categoría + "-" + idCaso
+  (p. ej. QUE-COM-123). Se guarda primero con un marcador temporal "TMP…"
+  y se reescribe al conocer el id.
+  <b>esAnonimo</b> solo puede ser verdadero si el tipo es "Denuncia".
+  <b>fechaActualizacion</b> funciona como versión (control de concurrencia
+  optimista en gestionar y reasignar).
+end note
+
+note bottom of Notificacion
+  Restricción BD: id_usuario o id_personal
+  debe estar informado (uno de los dos).
+end note
+
+note bottom of BitacoraAuditoria
+  Personal se referencia solo por idPersonal
+  (sin asociación JPA). No existen operaciones
+  de edición ni borrado.
+end note
+
+note top of HistorialEstadoCaso
+  idPersonal es una referencia lógica
+  a Personal (sin asociación JPA); nulo
+  cuando el cambio lo hace el cliente.
+end note
+@enduml

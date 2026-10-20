@@ -1,0 +1,79 @@
+@startuml 04b_diagrama_secuencia_responder_caso
+!include _estilo.iuml
+title Diagrama de Secuencia — CU-07 Responder caso (Operador) y aprobar respuesta (Gerente)
+skinparam ParticipantBackgroundColor #E3F2FD
+skinparam ParticipantBorderColor #455A64
+skinparam SequenceGroupBackgroundColor #F5F5F5
+autonumber "<b>00"
+
+actor "Operador" as OP
+actor "Gerente" as GE
+participant "GestionarCasos\nComponent" as UI
+participant "AdminService\n(Angular)" as AS
+participant "AdminCaso\nController" as AC
+participant "SesionPersonal" as SP
+participant "CasoService" as CS
+participant "BitacoraAuditoria\nService" as BS
+participant "NotificacionService" as NS
+database "PostgreSQL" as DB
+actor "Cliente" as CL
+
+== Parte 1: el Operador responde un caso asignado ==
+OP -> UI : "Responder" en un caso En Proceso\n(visible solo si es el responsable)
+UI -> UI : valida título ≤ 100 y cuerpo 20..1000
+UI -> AS : responder(idCaso, {titulo, cuerpo, accionesSeguimiento})
+AS -> AC : POST /api/admin/casos/{id}/respuesta
+activate AC
+AC -> SP : requerirRol(session, Admin, Gerente, Operador)
+SP -> DB : Personal por idPersonal de la sesión (activo)
+alt sin sesión / rol no permitido
+  SP --> AC : 401 "Debe iniciar sesión" / 403 "No posee permisos suficientes…"
+end
+AC -> CS : responder(caso, operador, titulo, cuerpo, acciones)
+activate CS
+CS -> CS : validarAlcance(): misma sucursal
+CS -> CS : estado = "En Proceso" (si no → 409 FA03)\ntiene responsable y responsable = operador (si no → 403 FA09)\nlongitudes válidas (si no → 400 FA02)
+CS -> DB : INSERT respuesta_caso\n(estado_aprobacion = "Pendiente de aprobación")
+CS -> BS : registrarAccionPersonal(…, "Respuesta pendiente de aprobación")
+BS -> DB : INSERT bitacora_auditoria
+CS --> AC : respuesta
+deactivate CS
+AC --> AS : 201 CasoAdminResponse (estado sigue "En Proceso")
+deactivate AC
+AS --> UI : caso actualizado
+UI --> OP : "Respuesta registrada. Queda pendiente de aprobación del Gerente."
+
+== Parte 2: el Gerente aprueba la respuesta ==
+GE -> UI : "Aprobar respuesta"
+UI -> AS : aprobarRespuesta(idRespuesta)
+AS -> AC : PUT /api/admin/casos/respuestas/{idRespuesta}/aprobar
+activate AC
+AC -> SP : requerirRol(session, Admin, Gerente)
+AC -> CS : findRespuesta(idRespuesta)
+alt no existe
+  AC --> AS : 404 "Respuesta no encontrada"
+end
+AC -> CS : aprobarRespuesta(respuesta, gerente)
+activate CS
+CS -> CS : validarAlcance(); respuesta pendiente (si no → 409 FA14);\ncaso "En Proceso"
+CS -> DB : UPDATE respuesta_caso SET estado_aprobacion = "Aprobada"
+CS -> CS : marcarResuelto()
+CS -> DB : UPDATE caso SET estado = "Resuelto", fecha_actualizacion
+CS -> DB : INSERT historial_estado_caso\n(En Proceso → Resuelto, "Respuesta oficial: <título>")
+CS -> BS : registrarAccionPersonal(…, "Respuesta oficial", JSON anterior/nuevo)
+BS -> DB : INSERT bitacora_auditoria
+CS -> NS : notificarUsuario(caso, cliente, "RESPUESTA_OFICIAL", …)
+NS -> DB : INSERT notificacion
+NS ->> CL : correo "Respuesta oficial - Caso <código>"
+CS --> AC : respuesta aprobada
+deactivate CS
+AC --> AS : CasoAdminResponse (estado "Resuelto")
+deactivate AC
+UI --> GE : "Respuesta aprobada. El caso <código> quedó en estado Resuelto."
+
+note over GE, CS
+  Si quien responde es Administrador General o Gerente, la respuesta se guarda
+  directamente como "Aprobada" y se ejecuta marcarResuelto() en el mismo paso.
+  El sistema no tiene un flujo para rechazar la respuesta de un Operador.
+end note
+@enduml

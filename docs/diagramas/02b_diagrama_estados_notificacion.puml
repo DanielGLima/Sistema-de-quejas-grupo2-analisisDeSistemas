@@ -1,0 +1,36 @@
+@startuml 02b_diagrama_estados_notificacion
+!include _estilo.iuml
+title Diagrama de Estados — Notificación por correo (CU-10, flujo 1)
+skinparam StateBackgroundColor #FFFFFF
+skinparam StateBorderColor #455A64
+
+state "Pendiente" as Pend #E3F2FD
+Pend : valor por defecto al construirla
+state "Sin contacto válido" as Sin #ECEFF1
+state "Omitido (SMTP no configurado)" as Omit #ECEFF1
+state "Enviado" as Env #E8F5E9
+state "Fallido" as Fall #FFEBEE
+Fall : reintentos < 3
+state "Revisión administrativa" as Rev #FFF3E0
+
+[*] --> Pend : evento del caso\n(registro, cancelación, cambio de estado,\nasignación, respuesta, reapertura)
+Pend --> Sin : [correo nulo o con formato inválido]
+Pend --> Omit : [MAIL_USERNAME no configurado]
+Pend --> Env : enviar() = true
+Pend --> Fall : enviar() = false
+Fall --> Env : reintentarFallidas() cada 5 min\n/ reintentos++ [envío correcto]
+Fall --> Fall : reintentarFallidas() / reintentos++\n[falla ∧ reintentos < 3]
+Fall --> Rev : reintentarFallidas() / reintentos++\n[falla ∧ reintentos = 3]
+Env --> [*]
+Sin --> [*]
+Omit --> [*]
+Rev --> [*]
+
+note bottom of Pend
+  El estado final se calcula antes del save(),
+  por lo que "Pendiente" no llega a guardarse
+  en la base de datos en el flujo normal.
+  Un fallo de notificación nunca interrumpe
+  la operación que la originó.
+end note
+@enduml

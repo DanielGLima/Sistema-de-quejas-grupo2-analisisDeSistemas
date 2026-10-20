@@ -1,0 +1,84 @@
+@startuml 03_diagrama_despliegue
+!include _estilo.iuml
+title Diagrama de Despliegue — Sistema QRDS "Las Delicias"\n(configuración actual del repositorio)
+skinparam NodeBackgroundColor #FAFAFA
+skinparam NodeBorderColor #455A64
+skinparam ArtifactBackgroundColor #E3F2FD
+skinparam ComponentBackgroundColor #FFFFFF
+skinparam DatabaseBackgroundColor #E8F5E9
+skinparam nodesep 50
+skinparam ranksep 70
+
+actor "Cliente" as Cli
+actor "Personal interno\n(Administrador General,\nGerente, Operador)" as Per
+
+node "Dispositivo del usuario\n<<PC / laptop / móvil>>" as Disp {
+  node "Navegador web\n<<Chrome, Edge, Firefox>>" as Nav {
+    artifact "SPA Angular 21\n(TypeScript 5.9, RxJS)" as SPA {
+      component "Rutas: /login, /registro,\n/recuperar-password,\n/actualizar-perfil,\n/registrar-caso, /consultar-casos" as RutasCli
+      component "Rutas protegidas (personalGuard):\n/gestionar-casos,\n/administrar (solo Admin)" as RutasPer
+      component "localStorage\n(currentUser, userRole,\nrolPersonal)" as LS
+    }
+    component "Cookie JSESSIONID" as Cookie
+  }
+}
+
+node "Servidor web del frontend\n<<Node.js — ng serve>>" as NodeFront {
+  artifact "frontend/\n(dist/ al compilar con ng build)" as FrontArt
+}
+
+node "Servidor de aplicaciones\n<<JVM — Java 17>>" as AppSrv {
+  node "Tomcat embebido\n:8081 (SERVER_PORT)" as Tomcat {
+    artifact "SistemaDeQuejas-0.0.1-SNAPSHOT.jar\n<<Spring Boot 4.1>>" as Jar {
+      component "SecurityConfig\n(CORS con credenciales,\nBCrypt, /api/** permitAll)" as Sec
+      component "Controladores REST\n/api/auth, /api/casos,\n/api/admin/**, catálogos" as Rest
+      component "Servicios de negocio\n(CasoService, NotificacionService,\nBitacoraAuditoriaService…)" as Svc
+      component "Spring Data JPA /\nHibernate (ddl-auto=validate)\n+ HikariCP" as Jpa
+      component "JavaMailSender" as Mail
+      component "@Scheduled\nreintentarFallidas()\n(cada 5 min)" as Sched
+      component "HttpSession en memoria\n+ SesionesActivas" as Ses
+      component "ResourceHandler\n/uploads/**" as Res
+    }
+  }
+  folder "uploads/\n(evidencias JPG/PNG/PDF\n≤ 2 MB, nombre UUID)" as Up
+}
+
+node "Servidor de base de datos\n<<PostgreSQL>>\nlocalhost:5432 o servicio\ngestionado (Neon)" as DbSrv {
+  database "sistemadequejas\n(schema.sql: 17 tablas)" as DB
+}
+
+node "Servidor de correo externo\n<<SMTP Gmail>>\nsmtp.gmail.com:587" as Smtp
+
+Cli --> Nav
+Per --> Nav
+Nav --> NodeFront : HTTP :4200\n(descarga de la SPA)
+SPA --> Rest : HTTP/JSON y multipart\nAPI_BASE_URL = http://localhost:8081/api\nwithCredentials (cookie de sesión)
+Nav --> Res : HTTP GET /uploads/<archivo>
+Rest --> Svc
+Svc --> Jpa
+Svc --> Mail
+Sched --> Mail
+Svc --> Up : escritura de archivos
+Res --> Up : lectura
+Jpa --> DB : JDBC / TCP 5432\n(DB_HOST, DB_PORT, DB_NAME,\nDB_USER, DB_PASSWORD)
+Mail --> Smtp : SMTP + STARTTLS :587\n(MAIL_USERNAME, MAIL_PASSWORD)
+
+note as N1
+  <b>Configuración del backend</b>
+  Variables de entorno: SERVER_PORT, DB_*, MAIL_*,
+  ADMIN_EMAIL / ADMIN_NOMBRE / ADMIN_PASSWORD
+  (crea el Administrador General inicial),
+  CORS_ORIGINS (por defecto http://localhost:4200).
+  Al arrancar: CatalogoEstadosInicial normaliza los
+  7 estados y EmailService prueba la conexión SMTP.
+end note
+
+note as N2
+  <b>Sesión</b>
+  La sesión vive en la memoria
+  de la JVM: un reinicio cierra
+  todas las sesiones y no
+  admite varias instancias sin
+  sesión compartida.
+end note
+@enduml

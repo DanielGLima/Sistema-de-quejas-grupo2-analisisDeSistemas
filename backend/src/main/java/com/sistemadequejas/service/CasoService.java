@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -190,7 +189,7 @@ public class CasoService {
 
         // FA01 / paso 7: plazo de 15 dias posteriores al cierre.
         LocalDateTime fechaCierre = fechaDeCierre(caso);
-        if (Duration.between(fechaCierre, LocalDateTime.now()).toDays() > PLAZO_REAPERTURA_DIAS) {
+        if (LocalDateTime.now().isAfter(fechaCierre.plusDays(PLAZO_REAPERTURA_DIAS))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "El plazo para solicitar la reapertura ha vencido. Puede registrar un nuevo caso (CU-02)");
         }

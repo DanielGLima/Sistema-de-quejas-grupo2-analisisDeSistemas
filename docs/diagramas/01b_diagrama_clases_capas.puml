@@ -1,0 +1,220 @@
+@startuml 01b_diagrama_clases_capas
+!include _estilo.iuml
+title Diagrama de Clases de diseño — Capas del backend (Spring Boot)\nControladores REST → Servicios → Repositorios (JPA)
+
+left to right direction
+hide empty fields
+skinparam nodesep 25
+skinparam ranksep 120
+skinparam linetype ortho
+
+package "controller  (/api/**)" #F3F8FC {
+  class AuthController <<RestController>> {
+    + correoDisponible(correo)
+    + registro(RegistroRequest)
+    + login(LoginRequest, HttpSession)
+    + logout(HttpSession)
+    + me(HttpSession)
+    + actualizarPerfil(ActualizarPerfilRequest, HttpSession)
+    + recuperarSolicitar(RecuperarSolicitarRequest)
+    + recuperarConfirmar(RecuperarConfirmarRequest)
+  }
+  class CasoController <<RestController>> {
+    + misCasos(HttpSession)
+    + obtener(id, HttpSession)
+    + crear(idTipoCaso, idSucursal, idCategoria, descripcion, numeroFactura, nombreEmpleado, esAnonimo, archivos, HttpSession)
+    + cancelar(id, CancelarCasoRequest, HttpSession)
+    + evaluar(id, EvaluarCasoRequest, HttpSession)
+    + solicitarReapertura(id, motivo, archivo, HttpSession)
+  }
+  class AdminCasoController <<RestController>> {
+    + buscar(filtros…, HttpSession)
+    + detalle(id, HttpSession)
+    + gestionar(id, GestionarCasoRequest, HttpSession)
+    + reasignar(id, ReasignarCasoRequest, HttpSession)
+    + responder(id, ResponderCasoRequest, HttpSession)
+    + aprobar(idRespuesta, HttpSession)
+  }
+  class AdminPersonalController <<RestController>> {
+    + asignables(HttpSession)
+    + listar(HttpSession)
+    + crear(PersonalRequest, HttpSession)
+    + actualizar(id, PersonalRequest, HttpSession)
+  }
+  class AdminCatalogoController <<RestController>> {
+    + roles() / sucursales() / tiposCaso()
+    + categorias() / estados()
+    + crear…(CatalogoRequest)
+    + actualizar…(id, CatalogoRequest, confirmar)
+  }
+  class AdminBitacoraController <<RestController>> {
+    + bitacora(fechas, accion, modulo, tipoActor, limite)
+    + notificaciones(HttpSession)
+  }
+  class "Catálogos públicos" as CatPub <<RestController>> {
+    TipoCasoController
+    CategoriaCasoController
+    SucursalController
+    EstadoCasoController
+    RolController
+  }
+  class CasoAdminMapper <<Component>> {
+    + toResponse(Caso, Personal, conDetalle) : CasoAdminResponse
+  }
+}
+
+package "config" #F6FBF4 {
+  class SesionPersonal <<Component>> {
+    + requerir(HttpSession) : Personal
+    + requerirRol(HttpSession, roles…) : Personal
+  }
+  class SesionesActivas <<HttpSessionListener>> {
+    - sesionesPorUsuario : Map<Integer, Set<HttpSession>>
+    + registrar(idUsuario, session)
+    + invalidarTodas(idUsuario)
+  }
+  class SecurityConfig <<Configuration>> {
+    + filterChain() : permitAll, CORS, sin CSRF
+    + passwordEncoder() : BCrypt
+  }
+  class GlobalExceptionHandler <<RestControllerAdvice>>
+  class CatalogoEstadosInicial <<CommandLineRunner>>
+  class AdministradorInicial <<CommandLineRunner>>
+}
+
+package "service" #FFFDF5 {
+  class CasoService <<Service>> {
+    - TRANSICIONES : Map<String, List<String>>
+    - ESTADOS_CANCELABLES = {Nuevo, En espera}
+    - ESTADOS_EVALUABLES = {Resuelto, Cerrado}
+    + ESTADOS_FINALES = {Cerrado, Cancelado por el usuario}
+    - PLAZO_REAPERTURA_DIAS = 15
+    + registrarCaso(Caso) : Caso
+    + cancelar(Caso, motivo) : Caso
+    + evaluar(Caso, calificacion, comentario) : EvaluacionCaso
+    + solicitarReapertura(Caso, Usuario, motivo, archivo) : Caso
+    + gestionar(Caso, Personal, idAsignado, estado, notas, version) : Caso
+    + reasignar(Caso, Personal, idNuevo, motivo, version) : Caso
+    + responder(Caso, Personal, titulo, cuerpo, acciones) : RespuestaCaso
+    + aprobarRespuesta(RespuestaCaso, Personal) : RespuestaCaso
+    + buscar(Personal, criterios…) : List<Caso>
+    + validarAlcance(Personal, Caso)
+    + {static} estadosPermitidos(estado) : List<String>
+    - marcarResuelto(Caso, Personal, RespuestaCaso)
+    - validarVersion(Caso, LocalDateTime)
+  }
+  class UsuarioService <<Service>> {
+    + registrar(Usuario, password) : Usuario
+    + autenticar(correo, password) : Usuario
+    + actualizarPerfil(Usuario, actual, nueva) : Usuario
+    + restablecerPassword(Usuario, nueva)
+    + validarDatosPerfil(Usuario)
+  }
+  class PersonalService <<Service>> {
+    + ROL_ADMINISTRADOR / ROL_GERENTE / ROL_OPERADOR
+    + autenticar(correo, password) : Personal
+    + crear(…) : Personal
+    + actualizar(…) : Personal
+    + findActivos() : List<Personal>
+  }
+  class RecuperacionContrasenaService <<Service>> {
+    + generarCodigo(Usuario) : RecuperacionContrasena
+    + validarCodigo(Usuario, codigo) : RecuperacionContrasena
+    + consumir(RecuperacionContrasena)
+  }
+  class CatalogoAdminService <<Service>> {
+    + guardarSucursal(id, req, confirmar)
+    + guardarTipoCaso(id, req, confirmar)
+    + guardarCategoria(id, req, confirmar)
+    + guardarEstado(id, req, confirmar)
+  }
+  class NotificacionService <<Service>> {
+    + notificarUsuario(Caso, Usuario, evento, asunto, cuerpo)
+    + notificarPersonal(Caso, Personal, evento, asunto, cuerpo)
+    + notificarPersonalDelCaso(Caso, evento, asunto, cuerpo)
+    + reintentarFallidas()  <<@Scheduled 5 min>>
+    + historial() : List<Notificacion>
+  }
+  class EmailService <<Service>> {
+    + estaConfigurado() : boolean
+    + enviar(destino, asunto, cuerpo) : boolean
+  }
+  class BitacoraAuditoriaService <<Service>> {
+    + registrarAccionUsuario(…)
+    + registrarAccionUsuarioSobreCaso(…)
+    + registrarAccionPersonal(…)
+    + consultar(filtros…, limite) : List<BitacoraAuditoria>
+    + {static} cambio(anterior, nuevo) : String
+  }
+  class FileStorageService <<Service>> {
+    + validar(MultipartFile) : String
+    + guardar(MultipartFile) : String
+  }
+  class "Servicios de catálogo y detalle" as SvcCat <<Service>> {
+    TipoCasoService, CategoriaCasoService,
+    SucursalService, EstadoCasoService, RolService,
+    HistorialEstadoCasoService, EvidenciaCasoService,
+    EvaluacionCasoService
+  }
+}
+
+package "repository  (Spring Data JPA)" #FBF5FC {
+  interface CasoRepository <<JpaRepository + Specification>>
+  interface UsuarioRepository
+  interface PersonalRepository
+  interface NotificacionRepository
+  interface BitacoraAuditoriaRepository
+  interface "Otros repositorios" as OtrosRepo {
+    Rol, Sucursal, TipoCaso, CategoriaCaso, EstadoCaso,
+    Evidencia, Historial, Respuesta, Reapertura,
+    Reasignacion, Evaluacion, RecuperacionContrasena
+  }
+}
+
+AuthController --> UsuarioService
+AuthController --> PersonalService
+AuthController --> RecuperacionContrasenaService
+AuthController --> EmailService
+AuthController --> SesionesActivas
+AuthController --> BitacoraAuditoriaService
+
+CasoController --> CasoService
+CasoController --> FileStorageService
+CasoController --> NotificacionService
+CasoController --> BitacoraAuditoriaService
+CasoController --> SvcCat
+CasoController --> UsuarioService
+
+AdminCasoController --> SesionPersonal
+AdminCasoController --> CasoService
+AdminCasoController --> CasoAdminMapper
+CasoAdminMapper --> CasoService
+AdminPersonalController --> SesionPersonal
+AdminPersonalController --> PersonalService
+AdminCatalogoController --> SesionPersonal
+AdminCatalogoController --> CatalogoAdminService
+AdminBitacoraController --> SesionPersonal
+AdminBitacoraController --> BitacoraAuditoriaService
+AdminBitacoraController --> NotificacionService
+CatPub --> SvcCat
+SesionPersonal --> PersonalService
+
+CasoService --> NotificacionService
+CasoService --> BitacoraAuditoriaService
+CasoService --> FileStorageService
+CasoService --> PersonalService
+CasoService --> SvcCat
+CasoService --> CasoRepository
+CasoService --> OtrosRepo
+NotificacionService --> EmailService
+NotificacionService --> PersonalService
+NotificacionService --> NotificacionRepository
+BitacoraAuditoriaService --> BitacoraAuditoriaRepository
+UsuarioService --> UsuarioRepository
+PersonalService --> PersonalRepository
+PersonalService --> CasoRepository
+CatalogoAdminService --> CasoRepository
+CatalogoAdminService --> OtrosRepo
+RecuperacionContrasenaService --> OtrosRepo
+SvcCat --> OtrosRepo
+@enduml

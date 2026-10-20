@@ -1,0 +1,106 @@
+@startuml 04_diagrama_secuencia_registrar_caso
+!include _estilo.iuml
+title Diagrama de Secuencia — CU-02 Registrar Nuevo Caso
+skinparam ParticipantBackgroundColor #E3F2FD
+skinparam ParticipantBorderColor #455A64
+skinparam SequenceLifeLineBorderColor #90A4AE
+skinparam SequenceGroupBackgroundColor #F5F5F5
+skinparam BoxPadding 8
+autonumber "<b>00"
+
+actor "Cliente" as C
+box "Frontend (Angular)" #F3F8FC
+  participant "RegistrarCaso\nComponent" as UI
+  participant "CasoService\n(Angular)" as FS
+end box
+box "Backend (Spring Boot)" #FFFDF5
+  participant "Controladores\nde catálogo" as CAT
+  participant "CasoController" as CC
+  participant "FileStorage\nService" as FSS
+  participant "CasoService" as CS
+  participant "NotificacionService" as NS
+  participant "EmailService" as ES
+  participant "BitacoraAuditoria\nService" as BS
+end box
+database "PostgreSQL" as DB
+participant "Servidor SMTP" as SMTP
+
+C -> UI : abre "Registrar caso"
+activate UI
+UI -> FS : tiposCaso(), categoriasCaso(), sucursales()
+FS -> CAT : GET /api/tipos-caso, /api/categorias-caso, /api/sucursales
+CAT --> FS : listas de catálogos activos
+FS --> UI : catálogos
+UI --> C : formulario (tipo, sucursal, categoría,\ndescripción, factura, empleado, anónimo, archivos)
+
+C -> UI : completa datos y presiona "Registrar caso"
+alt FA01: faltan obligatorios o descripción < 10
+  UI --> C : "Debe ingresar los campos obligatorios"
+else FA02: factura con símbolos
+  UI --> C : "El formato de la factura es inválido"
+else FA05: nombre de empleado con caracteres no válidos
+  UI --> C : "El nombre del empleado involucrado solo puede contener letras…"
+else datos válidos en el cliente
+  UI -> FS : crear(datos, archivos)
+  FS -> CC : POST /api/casos (multipart/form-data,\nwithCredentials → cookie JSESSIONID)
+  activate CC
+  CC -> CC : usuarioAutenticado(session)
+  alt sin sesión "idUsuario"
+    CC --> FS : 401 "Debe iniciar sesión"
+  end
+  CC -> CC : valida descripción (10..1000), factura ^[A-Za-z0-9]{1,20}$,\nnombre de empleado (solo letras ≤ 100)
+  loop por cada archivo
+    CC -> FSS : validar(archivo)
+    FSS -> FSS : tamaño ≤ 2 MB, extensión jpg/jpeg/png/pdf\ny firma binaria (magic bytes)
+    alt FA03: archivo no válido
+      FSS --> CC : 400 "El archivo adjunto supera los 2 MB o no corresponde…"
+      CC --> FS : 400 (no se registra nada)
+    end
+  end
+  CC -> DB : findById(tipo), findById(sucursal), findById(categoría),\nfindByNombre("Nuevo")
+  CC -> CC : new Caso(...)\nesAnonimo = esAnonimo ∧ tipo = "Denuncia"
+  CC -> CS : registrarCaso(caso)
+  activate CS
+  CS -> DB : INSERT caso (identificador = "TMP…")
+  DB --> CS : idCaso
+  CS -> CS : identificador = TIPO [+ "-" + CAT] + "-" + idCaso\n(ej. QUE-COM-123)
+  CS -> DB : UPDATE caso.identificador_visible
+  CS --> CC : caso guardado
+  deactivate CS
+  loop por cada archivo
+    CC -> FSS : guardar(archivo)
+    FSS -> FSS : escribe uploads/<UUID>.<ext>
+    FSS --> CC : nombreArchivo
+    CC -> DB : INSERT evidencia_caso (url /uploads/…, tipo, tamaño)
+  end
+  CC -> NS : notificarUsuario(caso, cliente, "REGISTRO_CASO", …)
+  activate NS
+  NS -> NS : armarCuerpo(): agrega "| Caso: <código> | Fecha y hora: …"
+  alt SMTP configurado
+    NS -> ES : enviar(correo, asunto, cuerpo)
+    ES -> SMTP : SMTP STARTTLS :587
+    ES --> NS : true / false
+  end
+  NS -> DB : INSERT notificacion (Enviado | Fallido | Omitido | Sin contacto válido)
+  CC -> NS : notificarPersonalDelCaso(caso, "CASO_NUEVO", …)
+  NS -> DB : personal activo
+  loop Administradores Generales + Gerentes de la sucursal del caso
+    NS -> ES : enviar(...)
+    NS -> DB : INSERT notificacion
+  end
+  deactivate NS
+  CC -> BS : registrarAccionUsuarioSobreCaso(cliente, caso,\n"Registro de caso", "Registro de casos", JSON)
+  BS -> DB : INSERT bitacora_auditoria (ip_origen, detalle)
+  CC --> FS : 201 Created (Caso)
+  deactivate CC
+  FS --> UI : caso
+  UI --> C : "Caso registrado exitosamente. Código asignado: QUE-COM-123"
+  UI -> UI : setTimeout(2,2 s) → navegar a /consultar-casos (CU-03)
+end
+deactivate UI
+
+note over NS, BS
+  Ninguna falla de notificación o de bitácora interrumpe el registro:
+  ambas capturan la excepción y solo la escriben en el log.
+end note
+@enduml

@@ -1,0 +1,127 @@
+@startuml 05_diagrama_procesos
+!include _estilo.iuml
+title Diagrama de Procesos — Atención de un caso QRDS de principio a fin
+skinparam ActivityBackgroundColor #FFFFFF
+skinparam ActivityBorderColor #455A64
+skinparam ActivityDiamondBackgroundColor #FFF8E1
+skinparam SwimlaneTitleFontStyle bold
+skinparam SwimlaneTitleFontSize 13
+
+|#E3F2FD|Cliente|
+start
+:Inicia sesión en el portal (CU-00);
+note right
+  Si no tiene cuenta: se registra (CU-01).
+  Si olvidó la contraseña: código de
+  6 caracteres por correo, vigente 15 min.
+end note
+:Abre "Registrar caso" y elige
+tipo (Queja, Reclamo, Denuncia, Sugerencia),
+sucursal y categoría;
+repeat
+  |Cliente|
+  :Escribe la descripción (10–1000) y, si aplica,
+  número de factura, empleado involucrado,
+  denuncia anónima y evidencias (JPG/PNG/PDF ≤ 2 MB);
+  |#FFFDF5|Sistema|
+  :Valida datos y archivos;
+repeat while (¿Datos y archivos válidos?) is (no: muestra FA01/FA02/FA03/FA05)
+-> sí;
+:Registra el caso en estado **Nuevo**
+y genera el código TIPO-CAT-id;
+:Guarda las evidencias;
+:Notifica al cliente y a Administradores
+Generales + Gerentes de la sucursal;
+:Registra la acción en la bitácora;
+
+|Cliente|
+:Recibe el código y consulta "Mis casos" (CU-03);
+if (¿Desea cancelar el caso?) then (sí)
+  |Sistema|
+  if (¿Estado Nuevo o En espera y\nsin responsable asignado?) then (sí)
+    :Cambia a **Cancelado por el usuario**
+    y notifica al personal (CU-04);
+    stop
+  else (no)
+    :Informa "El caso ya se encuentra
+    en atención y no puede ser cancelado";
+  endif
+else (no)
+endif
+
+|#E8F5E9|Gerente / Administrador General|
+:Revisa la "Bandeja de casos" y filtra
+por fecha, tipo, categoría, sucursal,
+estado, código, cliente o responsable (CU-08);
+:Gestiona el caso: asigna responsable
+y define el nuevo estado (CU-07);
+note right
+  Solo transiciones válidas.
+  El Gerente solo ve su sucursal.
+  Cada cambio: historial + bitácora
+  + correo al cliente.
+end note
+if (¿Decisión de gestión?) then (requiere información)
+  :Estado **En espera**;
+  :Obtiene la información faltante;
+  :Pasa el caso a **En Proceso**;
+elseif () then (no procede)
+  :Estado **Cerrado**
+  (se notifica al cliente; puede pedir
+  reapertura en 15 días);
+  stop
+else (atender)
+  :Estado **En Proceso**;
+endif
+
+repeat
+  if (¿Quién elabora la respuesta?) then (Operador asignado)
+    |#FFF3E0|Operador|
+    :Analiza el caso y redacta la respuesta
+    (título, cuerpo 20–1000, acciones
+    de compensación/seguimiento);
+    |Sistema|
+    :Guarda la respuesta como
+    "Pendiente de aprobación";
+    |Gerente / Administrador General|
+    :Revisa y aprueba la respuesta;
+  else (Gerente / Administrador)
+    :Redacta y emite la respuesta oficial;
+  endif
+  |Sistema|
+  :Cambia el caso a **Resuelto**;
+  :Notifica la respuesta oficial al cliente;
+
+  |Cliente|
+  :Lee la respuesta y, si lo desea,
+  evalúa la atención (1–5, una sola vez) (CU-05);
+
+  |Gerente / Administrador General|
+  :Cierra el caso: estado **Cerrado**;
+
+  |Cliente|
+  if (¿Está conforme con la resolución?) then (sí)
+    :Fin del caso;
+    stop
+  else (no)
+  endif
+  |Sistema|
+  if (¿Dentro de los 15 días\nposteriores al cierre?) then (no)
+    |Cliente|
+    :Registra un caso nuevo si lo necesita;
+    stop
+  else (sí)
+  endif
+  |Cliente|
+  :Solicita reapertura con motivo (10–500)
+  y evidencia opcional (CU-06);
+  |Sistema|
+  :Estado **Reapertura solicitada**
+  notifica al responsable o a la gerencia;
+  |Gerente / Administrador General|
+  :Dictamina la reapertura;
+repeat while (¿Procede?) is (sí → En Proceso)
+-> no;
+:Estado **Cerrado**;
+stop
+@enduml
