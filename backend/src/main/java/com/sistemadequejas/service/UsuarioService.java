@@ -167,10 +167,18 @@ public class UsuarioService {
     public Usuario actualizarPerfil(Usuario usuario, String passwordActualPlano, String passwordNuevaPlano) {
         validarDatosPerfil(usuario);
         if (passwordNuevaPlano != null && !passwordNuevaPlano.isBlank()) {
-            if (passwordActualPlano == null || !passwordEncoder.matches(passwordActualPlano, usuario.getContrasenaHash())) {
+            // CU-01 FA19: contrasena actual vacia o incorrecta; FA21: formato de la nueva contrasena.
+            if (passwordActualPlano == null || passwordActualPlano.isBlank()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe ingresar su contraseña actual para poder cambiarla");
+            }
+            if (!passwordEncoder.matches(passwordActualPlano, usuario.getContrasenaHash())) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Contraseña actual incorrecta");
             }
-            validarFormatoPassword(passwordNuevaPlano, MSG_FORMATO_PASSWORD_CU02);
+            if (passwordNuevaPlano.length() < 6 || passwordNuevaPlano.length() > 20
+                    || !PATRON_PASSWORD.matcher(passwordNuevaPlano).matches()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Formato de datos no válido. Revise el campo: nueva contraseña");
+            }
             usuario.setContrasenaHash(passwordEncoder.encode(passwordNuevaPlano));
         }
         return usuarioRepository.saveAndFlush(usuario);
