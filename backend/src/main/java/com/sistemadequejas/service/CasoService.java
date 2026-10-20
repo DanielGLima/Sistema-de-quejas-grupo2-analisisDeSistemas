@@ -257,7 +257,14 @@ public class CasoService {
         validarAlcance(actor, caso);
         validarVersion(caso, fechaActualizacionVista);
 
-        if (nuevoEstado == null || nuevoEstado.isBlank()) {
+        // FA04: un caso con reapertura solicitada exige dictaminar (reactivar a En Proceso o ratificar como Cerrado).
+        boolean sinEstado = nuevoEstado == null || nuevoEstado.isBlank();
+        if ("Reapertura solicitada".equals(caso.getEstadoCaso().getNombre())
+                && (sinEstado || "Reapertura solicitada".equals(nuevoEstado.trim()))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Debe dictaminar si reactiva a En Proceso o ratifica como Cerrado");
+        }
+        if (sinEstado) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe seleccionar un estado válido");
         }
         if (notas != null && notas.length() > 500) {
@@ -407,20 +414,15 @@ public class CasoService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, SesionPersonal.SIN_PERMISOS);
         }
 
-        // FA02: informacion insuficiente, indicando los datos faltantes.
-        List<String> faltantes = new ArrayList<>();
-        if (titulo == null || titulo.isBlank() || titulo.length() > 100) {
-            faltantes.add("título o resumen (máximo 100 caracteres)");
-        }
-        if (cuerpo == null || cuerpo.trim().length() < 20 || cuerpo.length() > 1000) {
-            faltantes.add("cuerpo de la respuesta (entre 20 y 1000 caracteres)");
+        // FA07: informacion insuficiente (titulo de hasta 100 caracteres y cuerpo de 20 a 1000).
+        if (titulo == null || titulo.isBlank() || titulo.length() > 100
+                || cuerpo == null || cuerpo.trim().length() < 20 || cuerpo.length() > 1000) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Debe completar la información requerida: título (máx. 100) y cuerpo de la respuesta (entre 20 y 1000 caracteres)");
         }
         if (acciones != null && acciones.length() > 300) {
-            faltantes.add("acciones de compensación/seguimiento (máximo 300 caracteres)");
-        }
-        if (!faltantes.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Debe completar la información requerida: " + String.join("; ", faltantes));
+                    "Las acciones de compensación o seguimiento no pueden superar los 300 caracteres");
         }
 
         RespuestaCaso respuesta = new RespuestaCaso();
