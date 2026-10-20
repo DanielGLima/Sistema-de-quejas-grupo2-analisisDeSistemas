@@ -67,6 +67,9 @@ public class AuthController {
     @PostMapping("/registro")
     public ResponseEntity<Usuario> registro(@RequestBody RegistroRequest request) {
         Usuario creado = usuarioService.registrar(datosDeRegistro(request), request.getPassword(), request.getConfirmacionPassword());
+        bitacoraAuditoriaService.registrarAccionUsuario(creado, "Registro de cuenta", "Registro de usuario",
+                BitacoraAuditoriaService.cambio("{}", BitacoraAuditoriaService.json(
+                        "nombreCompleto", creado.getNombreCompleto(), "correo", creado.getCorreo())));
         return ResponseEntity.status(HttpStatus.CREATED).body(creado);
     }
 

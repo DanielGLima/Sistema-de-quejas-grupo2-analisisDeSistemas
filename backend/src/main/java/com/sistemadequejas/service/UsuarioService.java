@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
@@ -54,28 +55,28 @@ public class UsuarioService {
     private String primerCampoInvalido(Usuario u) {
         if (u.getNombreCompleto() == null || u.getNombreCompleto().isBlank() || u.getNombreCompleto().length() > 100
                 || !PATRON_SOLO_LETRAS.matcher(u.getNombreCompleto()).matches()) {
-            return "nombre completo (solo letras, máximo 100 caracteres)";
+            return "nombre completo";
         }
         if (u.getFechaNacimiento() == null || u.getFechaNacimiento().isAfter(LocalDate.now())
                 || u.getFechaNacimiento().isBefore(LocalDate.of(1900, 1, 1))) {
-            return "fecha de nacimiento (formato dd/mm/aaaa, no puede ser posterior a hoy ni anterior a 1900)";
+            return "fecha de nacimiento";
         }
         if (u.getNacionalidad() == null || u.getNacionalidad().isBlank() || u.getNacionalidad().length() > 50
                 || !nacionalidadRepository.existsByNombreAndActivoTrue(u.getNacionalidad())) {
-            return "nacionalidad (debe ser una de las opciones del catálogo)";
+            return "nacionalidad";
         }
-        if (u.getCorreo() == null || u.getCorreo().length() > 100 || !PATRON_CORREO.matcher(u.getCorreo()).matches()) {
-            return "correo electrónico (formato válido, máximo 100 caracteres)";
+        if (u.getCorreo() == null || u.getCorreo().length() > 100 || !PATRON_CORREO.matcher(u.getCorreo().trim()).matches()) {
+            return "correo electrónico";
         }
         if (u.getCodigoArea() == null || u.getCodigoArea().length() < 1 || u.getCodigoArea().length() > 4
                 || !PATRON_NUMERICO.matcher(u.getCodigoArea()).matches()) {
-            return "código de área (solo números, máximo 4 dígitos)";
+            return "código de área telefónico";
         }
         if (u.getTelefono() == null || u.getTelefono().length() != 8 || !PATRON_NUMERICO.matcher(u.getTelefono()).matches()) {
-            return "teléfono (exactamente 8 dígitos)";
+            return "número de teléfono";
         }
         if (u.getDireccion() == null || u.getDireccion().isBlank() || u.getDireccion().length() > 150) {
-            return "dirección (obligatoria, máximo 150 caracteres)";
+            return "dirección";
         }
         return null;
     }
@@ -92,10 +93,12 @@ public class UsuarioService {
         return usuarioRepository.findByCorreo(correo);
     }
 
+    @Transactional
     public Usuario save(Usuario usuario) {
         return usuarioRepository.save(usuario);
     }
 
+    @Transactional
     public void deleteById(Integer id) {
         usuarioRepository.deleteById(id);
     }
@@ -122,17 +125,18 @@ public class UsuarioService {
     }
 
     // CU-01: crea la cuenta cifrando la contrasena antes de guardar.
+    @Transactional
     public Usuario registrar(Usuario usuario, String passwordPlano, String confirmacionPassword) {
         validarDatosRegistro(usuario);
         // FA03 a FA05: longitud, formato y confirmacion de la contrasena
         validarPasswordNueva(passwordPlano, confirmacionPassword, MSG_FORMATO_PASSWORD_CU01);
         usuario.setContrasenaHash(passwordEncoder.encode(passwordPlano));
-        return usuarioRepository.save(usuario);
+        return usuarioRepository.saveAndFlush(usuario);
     }
 
     // CU-00: valida credenciales sin revelar cual campo fallo (FA05).
     public Usuario autenticar(String correo, String passwordPlano) {
-        Usuario usuario = usuarioRepository.findByCorreo(correo == null ? "" : correo)
+        Usuario usuario = usuarioRepository.findByCorreo(correo == null ? "" : correo.trim())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Correo electrónico o contraseña incorrectos"));
 
         if (passwordPlano == null || !passwordEncoder.matches(passwordPlano, usuario.getContrasenaHash())) {
@@ -159,7 +163,9 @@ public class UsuarioService {
     }
 
     // CU-03: actualiza datos y, opcionalmente, la contrasena (exige la actual, FA01).
+    @Transactional
     public Usuario actualizarPerfil(Usuario usuario, String passwordActualPlano, String passwordNuevaPlano) {
+        validarDatosPerfil(usuario);
         if (passwordNuevaPlano != null && !passwordNuevaPlano.isBlank()) {
             if (passwordActualPlano == null || !passwordEncoder.matches(passwordActualPlano, usuario.getContrasenaHash())) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Contraseña actual incorrecta");
@@ -167,13 +173,14 @@ public class UsuarioService {
             validarFormatoPassword(passwordNuevaPlano, MSG_FORMATO_PASSWORD_CU02);
             usuario.setContrasenaHash(passwordEncoder.encode(passwordNuevaPlano));
         }
-        return usuarioRepository.save(usuario);
+        return usuarioRepository.saveAndFlush(usuario);
     }
 
     // CU-02: aplica la nueva contrasena tras validar el codigo de recuperacion.
+    @Transactional
     public void restablecerPassword(Usuario usuario, String passwordNuevaPlano) {
         validarFormatoPassword(passwordNuevaPlano, MSG_FORMATO_PASSWORD_CU02);
         usuario.setContrasenaHash(passwordEncoder.encode(passwordNuevaPlano));
-        usuarioRepository.save(usuario);
+        usuarioRepository.saveAndFlush(usuario);
     }
 }
